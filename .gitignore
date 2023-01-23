@@ -1,0 +1,4 @@
+miscellaneous/
+venv/
+data/**
+.DS_Store
