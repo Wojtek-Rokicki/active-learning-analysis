@@ -12,9 +12,35 @@ def decision_boundary_most_ambiguous(clf, X_pool, unknown_indexes):
 
 class UncertaintySampling():
     def least_confident(clf, X: pd.DataFrame, k=1):
+        """ <Summary description>
+
+        <Detailed description>
+
+        Parameters
+        ----------
+        clf : BaseEstimator
+            model which has predict_proba method
+        X : array-like
+            pool DataFrame
+        k : int, default=1
+            how many most informative samples indices should 
+            be returned
+
+        Returns
+        -------
+        indices : pd.Index, length=k
+            <output description>
+
+        Examples
+        --------
+        >>> <execution instruction>
+        <result for doctest>
+        """
+        X = X.loc[:, ~X.columns.isin(["pred_proba", "max_proba"])]
         X['pred_proba'] = X.apply(lambda x : dict(
             zip(clf.classes_, clf.predict_proba(x.values[None])[0])
             ), axis = 1)
         X['max_proba'] = X['pred_proba'].apply(lambda x: sorted(x.items(), key=operator.itemgetter(1), reverse=True)[0])
         X.sort_values(by='max_proba', ascending=True, key=lambda col: col.map(lambda x: x[1]), inplace=True) # key should expect Series
-        return X.iloc[:k].index # use loc to index pd.DataFrame by Index object, drop for removing
+        indices = X.iloc[:k].index # use loc to index pd.DataFrame by Index object, drop for removing
+        return indices
