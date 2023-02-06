@@ -12,9 +12,11 @@ def decision_boundary_most_ambiguous(clf, X_pool, unknown_indexes):
 
 class UncertaintySampling():
     def least_confident(clf, X: pd.DataFrame, k=1):
-        """ <Summary description>
+        """ Selects most informative samples.
 
-        <Detailed description>
+        Selects indices of the most informative samples for
+        model - samples, which most probable label is least 
+        probable among other samples.
 
         Parameters
         ----------
@@ -44,3 +46,15 @@ class UncertaintySampling():
         X.sort_values(by='max_proba', ascending=True, key=lambda col: col.map(lambda x: x[1]), inplace=True) # key should expect Series
         indices = X.iloc[:k].index # use loc to index pd.DataFrame by Index object, drop for removing
         return indices
+
+    # there is margin sampling, which takes into account the rest of the labels distribution
+    # it takes samples, for which two most probable classes are indistinguishable
+    # it comes down to least confident in binary classification
+
+    # entropy - information needed to encode classes distribution. In binary problem it reduces to
+    # above methods
+
+# Query by Commitee (QBC)
+# - Disagreement measurements
+#   - Vote entropy
+#   - Kullback-Leibler Divergence
