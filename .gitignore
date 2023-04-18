@@ -1,6 +1,9 @@
-.DS_Store
+**/.DS_Store
+**/.ipynb_checkpoints
 __pycache__
 miscellaneous/
 venv/
 data/**
 results/**
+code/active_learning/libact
+code/active_learning/modAL
