@@ -4,6 +4,8 @@ import sklearn
 import pandas as pd
 from imblearn.datasets import fetch_datasets
 
+from config import BENCHMARK_PATH
+
 class Benchmark:
     # Benchmark datasets
     # Source: https://imbalanced-learn.org/stable/datasets/index.html
@@ -40,7 +42,7 @@ class Benchmark:
 
     
     cwd = os.getcwd()
-    fp_benchmark = os.path.join(cwd, "../data/benchmark")
+    fp_benchmark = os.path.join(cwd, BENCHMARK_PATH)
 
     # Download, convert and save datasets
     def save_benchmark_dataset(bunch: sklearn.utils.Bunch) -> None:

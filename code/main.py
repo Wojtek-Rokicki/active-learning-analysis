@@ -1,8 +1,10 @@
 from benchmark import Benchmark
+from config import DATASETS
 
 datasets = Benchmark.load_all_benchmark_datasets()
 
-datasets = datasets["ecoli"]
+# Select datasets
+datasets = {key: datasets[key] for key in DATASETS}
 
 from active_learning import test_al_methods
 

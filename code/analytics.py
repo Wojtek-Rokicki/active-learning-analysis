@@ -29,9 +29,3 @@ def analyse_dataset(df: pd.DataFrame) -> None:
 
 from sklearn.decomposition import PCA
 RANDOM_STATE_SEED = 13
-
-# TODO: PCA analysis
-def pca_dataset(df: pd.DataFrame) -> None:
-    # Define our PCA transformer and fit it onto our raw dataset.
-    pca = PCA(n_components=2, random_state=RANDOM_STATE_SEED)
-    transformed_iris = pca.fit_transform(X=X_raw)

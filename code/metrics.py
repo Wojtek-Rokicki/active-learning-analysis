@@ -2,17 +2,19 @@
 from sklearn.metrics import accuracy_score, precision_recall_curve, roc_curve, auc, precision_score, recall_score, fbeta_score, make_scorer
 from imblearn.metrics import geometric_mean_score
 
-def method_eval(y_test, y_pred, verbose=0, return_thresholds=False):
+def method_eval(y_test, y_pred, y_proba, verbose=0):
+
+    results = {}
 
     accuracy = accuracy_score(y_test, y_pred)
 
-    fpr, tpr, roc_thresholds = roc_curve(y_test, y_pred) # positive when >= threshold
+    fpr, tpr, roc_thresholds = roc_curve(y_test, y_proba[:, 1]) # positive when >= threshold
     auc_roc_curve = auc(fpr, tpr)
 
     # Plotting ROC
     # pyplot.plot(fpr, tpr, marker='.', label='ROC')
 
-    precisions, recalls, pr_thresholds = precision_recall_curve(y_test, y_pred) # positive when >= threshold
+    precisions, recalls, pr_thresholds = precision_recall_curve(y_test, y_proba[:, 1]) # positive when >= threshold
     auc_pr_curve = auc(recalls, precisions)
 
     # Plotting PR Curve
@@ -32,7 +34,7 @@ def method_eval(y_test, y_pred, verbose=0, return_thresholds=False):
 
     g_mean = geometric_mean_score(y_test, y_pred)
 
-    metrics = {
+    results["metrics"] = {
                 "accuracy": accuracy,
                 "precision": precision,
                 "recall": recall,
@@ -42,6 +44,11 @@ def method_eval(y_test, y_pred, verbose=0, return_thresholds=False):
                 "auc_roc_curve": auc_roc_curve,
                 # "g_mean": g_mean
             }
+    
+    results["curves"] = {
+        "pr_curve":{"precisions": precisions.tolist(), "recalls": recalls.tolist(), "pr_thresholds": pr_thresholds.tolist()},
+        "roc_curve":{"fpr": fpr.tolist(), "tpr": tpr.tolist(), "roc_thresholds": roc_thresholds.tolist()}
+        }
     
     if verbose:
         print(
@@ -55,10 +62,7 @@ def method_eval(y_test, y_pred, verbose=0, return_thresholds=False):
             # f"g_mean: {g_mean},", 
             sep="\n")
 
-    if return_thresholds:
-        return metrics, pr_thresholds, roc_thresholds
-
-    return metrics
+    return results
 
 f2_func = lambda y_true, y_pred: fbeta_score(y_true=y_true, y_pred=y_pred, beta=2, zero_division=0)
 
