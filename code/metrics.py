@@ -2,7 +2,7 @@
 from sklearn.metrics import accuracy_score, precision_recall_curve, roc_curve, auc, precision_score, recall_score, fbeta_score, make_scorer
 from imblearn.metrics import geometric_mean_score
 
-def method_eval(y_test, y_pred, y_proba, verbose=0):
+def method_eval(y_test, y_pred, y_proba, verbose=0, curves=True):
 
     results = {}
 
@@ -44,11 +44,11 @@ def method_eval(y_test, y_pred, y_proba, verbose=0):
                 "auc_roc_curve": auc_roc_curve,
                 # "g_mean": g_mean
             }
-    
-    results["curves"] = {
-        "pr_curve":{"precisions": precisions.tolist(), "recalls": recalls.tolist(), "pr_thresholds": pr_thresholds.tolist()},
-        "roc_curve":{"fpr": fpr.tolist(), "tpr": tpr.tolist(), "roc_thresholds": roc_thresholds.tolist()}
-        }
+    if curves:
+        results["curves"] = {
+            "pr_curve":{"precisions": precisions.tolist(), "recalls": recalls.tolist(), "pr_thresholds": pr_thresholds.tolist()},
+            "roc_curve":{"fpr": fpr.tolist(), "tpr": tpr.tolist(), "roc_thresholds": roc_thresholds.tolist()}
+            }
     
     if verbose:
         print(

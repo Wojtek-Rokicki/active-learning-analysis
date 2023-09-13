@@ -16,6 +16,10 @@ BENCHMARK_PATH = './data/benchmark'
 MODELS_PATH = './results/models/'
 PLOTS_PATH = './results/plots/'
 PARTIAL_RESULTS_PATH = './results/partial/'
+# BENCHMARK_PATH = '../data/benchmark'
+# MODELS_PATH = '../results/models/'
+# PLOTS_PATH = '../results/plots/'
+# PARTIAL_RESULTS_PATH = '../results/partial/'
 
 # General
 RANDOM_STATE_SEED = 13
@@ -50,10 +54,10 @@ DATASETS = [      # ID    Repository & Target             Ratio     #S      #F
         "wine_quality",     # 20    UCI, wine, target: <=4          26:1      4,898   11
         "letter_img",       # 21    UCI, target: Z                  26:1      20,000  16
         "yeast_me2",        # 22    UCI, target: ME2                28:1      1,484   8
-        "webpage",          # 23    LIBSVM, w7a, target: minority   33:1      34,780  300
+        # "webpage",          # 23    LIBSVM, w7a, target: minority   33:1      34,780  300  ## takes so long ...
         "ozone_level",      # 24    UCI, ozone, data                34:1      2,536   72
         "mammography",      # 25    UCI, target: minority           42:1      11,183  6
-        "protein_homo",     # 26    KDD CUP 2004, minority          11:1      145,751 74
+        # "protein_homo",     # 26    KDD CUP 2004, minority          11:1      145,751 74  ## takes so long ...
         "abalone_19"        # 27    UCI, target: 19                 130:1     4,177   10
     ] 
 
@@ -180,29 +184,29 @@ CUSTOM_EER_CLASSIFIERS = {
 }
 
 active_learning_methods = {
-    "uncertainty_sampling": {
-        "params": [{'query_strategy': uncertainty_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-        "classifiers": GS_CLASSIFIERS
-    },
-    "query_by_committee":{
-        "params": [{'query_strategy': vote_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
-                    {'query_strategy': consensus_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
-                    {'query_strategy': max_disagreement_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-        "classifiers": COMMITTEES,
+    # "uncertainty_sampling": {
+    #     "params": [{'query_strategy': uncertainty_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
+    #     "classifiers": GS_CLASSIFIERS
+    # },
+    # "query_by_committee":{
+    #     "params": [{'query_strategy': vote_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
+    #                 {'query_strategy': consensus_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
+    #                 {'query_strategy': max_disagreement_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
+    #     "classifiers": COMMITTEES,
 
-    },
-    "query_by_bagging":{
-        "params": [{'query_strategy': vote_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
-                    {'query_strategy': consensus_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
-                    {'query_strategy': max_disagreement_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-        "classifiers": COMMITTEES,
-    },
+    # },
+    # "query_by_bagging":{
+    #     "params": [{'query_strategy': vote_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
+    #                 {'query_strategy': consensus_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
+    #                 {'query_strategy': max_disagreement_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
+    #     "classifiers": COMMITTEES,
+    # },
     # "query_by_boosting", TODO
     # "expected_model_change", TODO
-    "expected_error_reduction": {
-        "params": [{'query_strategy': expected_error_reduction, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-        "classifiers": CUSTOM_EER_CLASSIFIERS
-    },
+    # "expected_error_reduction": {
+    #     "params": [{'query_strategy': expected_error_reduction, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
+    #     "classifiers": CUSTOM_EER_CLASSIFIERS
+    # },
     "variance_reduction": {
         "params":[{'query_strategy': fisher_information_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
         "classifiers": CUSTOM_VR_CLASSIFIERS

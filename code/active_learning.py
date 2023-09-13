@@ -49,7 +49,7 @@ def learn_active(learner, bagging, stopping_crriterion, X_pool, X_test, y_pool, 
         print("Initial model")
         print(50*'-')
 
-    unqueried_score = method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=VERBOSE)
+    unqueried_score = method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=VERBOSE, curves=False)
 
     if VERBOSE:
         print(50*'-') 
@@ -60,7 +60,7 @@ def learn_active(learner, bagging, stopping_crriterion, X_pool, X_test, y_pool, 
     performance_history = [unqueried_score]
     initial_confidence = np.mean(classifier_entropy(learner, X_test))
     entropy_confidence_history = [initial_confidence]
-    filenames = []
+    # filenames = []
 
     if VERBOSE:
         start_time = time.perf_counter()
@@ -89,7 +89,7 @@ def learn_active(learner, bagging, stopping_crriterion, X_pool, X_test, y_pool, 
         y_proba = learner.predict_proba(X_test)
         if VERBOSE: print(50*'-')
         model_performance = \
-            method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=VERBOSE)
+            method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=VERBOSE, curves=False)
         if VERBOSE: print(50*'-')
 
         # Save our model's performance for plotting.
@@ -107,16 +107,19 @@ def learn_active(learner, bagging, stopping_crriterion, X_pool, X_test, y_pool, 
             if len(y_pool) < AL_QUERY_BATCH_SIZE:
                 break
         
-        filename = save_model(learner)
-        filenames.append(filename)
+        # filename = save_model(learner)
+        # filenames.append(filename)
 
     if VERBOSE:
         stop_time = time.perf_counter()
         print(f"AL querying elapsed time: {(stop_time-start_time):.2f}s")
 
-    results["pool_training"] = {"queried_samples": queried_classes_counter, "performance_history": performance_history, "entropy_confidence": entropy_confidence_history, "filenames": filenames}
+    model_performance = \
+            method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=VERBOSE)
+
+    results["pool_training"] = {"queried_samples": queried_classes_counter, "performance_history": performance_history, "entropy_confidence": entropy_confidence_history,} #"filenames": filenames}
     results["final_al_classification"] = model_performance
-    results["final_al_model_filepath"] = filename
+    # results["final_al_model_filepath"] = filename
     results["final_al_y_test"] = y_test.tolist()
     results["final_al_y_proba"] = y_proba[:,1].tolist()
 
@@ -318,8 +321,8 @@ def test_al_methods(datasets, debug_level = 0):
                                 print(50*'-')
 
                             fold_results["full_train_classification"] = full_model_score
-                            filename = save_model(full_learner)
-                            fold_results["full_train_filepath"] = filename
+                            # filename = save_model(full_learner)
+                            # fold_results["full_train_filepath"] = filename
 
                         # Learn actively!
                         al_results = \
@@ -358,6 +361,7 @@ def test_al_methods(datasets, debug_level = 0):
 
                     folds_final_models_tests_concat = np.concatenate(folds_final_models_tests)
                     folds_final_models_probas_concat = np.concatenate(folds_final_models_probas)
+                    # TODO: Mean full train models for comparison
 
                     _, pr_plot_filename = plot_pr_curve(folds_final_models_tests_concat, folds_final_models_probas_concat)
                     _, roc_plot_filename = plot_roc(folds_final_models_tests_concat, folds_final_models_probas_concat)
@@ -382,10 +386,10 @@ def test_al_methods(datasets, debug_level = 0):
                                                 "precision": mean_precision,
                                                 "recall": mean_recall,
                                                 "f2_score": mean_f2_score,
-                                                "auc_pr_curve": mean_auc_pr_curve,
+                                                "auc_pr_curve": mean_auc_pr_curve, # TODO: not mean, but from concat
                                                 "auc_roc_curve": mean_auc_roc_curve,
-                                                "folds_final_models_tests_concat": folds_final_models_tests_concat.tolist(),
-                                                "folds_final_models_probas_concat" : folds_final_models_probas_concat.tolist(),
+                                                # "folds_final_models_tests_concat": folds_final_models_tests_concat.tolist(),
+                                                # "folds_final_models_probas_concat" : folds_final_models_probas_concat.tolist(),
                                                 "pr_curve_fig_filename": pr_plot_filename,
                                                 "roc_curve_fig_filename": roc_plot_filename,
                                                 # "g_mean": mean_g_mean
