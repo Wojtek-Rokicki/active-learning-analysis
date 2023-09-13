@@ -1,5 +1,5 @@
 # In order to measure Jupter Notebook's time type in the cell %%time
-import time, sys
+import time, json
 import functools
 from multiprocessing import Pool, Manager
 
@@ -65,7 +65,7 @@ def train_all_models(*args, **kwargs):
         _ = train_model(GBC, X_train, y_train)
     return
 
-NO_ITERATIONS = 100
+NO_ITERATIONS = 30
 
 @measure_time
 def train_loop():
@@ -73,23 +73,28 @@ def train_loop():
         train_all_models()
 
 @measure_time
-def multiproc_train_loop():
-    with Manager() as manager:
-        results = manager.list()
-        with Pool() as pool:
-            for _ in range(NO_ITERATIONS):
-                pool.apply_async(train_all_models, kwds = {'results': results})
-            pool.close()
-            pool.join()
-        print(results)
-        return list(results)
+def multiproc_train_loop(results):
+    with Pool() as pool:
+        for _ in range(NO_ITERATIONS):
+            pool.apply_async(train_all_models, kwds = {'results': results})
+        pool.close()
+        pool.join()
 
 if __name__ == '__main__':
     print("Loop without multiprocessing took:")
     train_loop()
     
     print("Multiprocessing loop took:")
-    results = multiproc_train_loop()
+    with Manager() as manager:
+        results = manager.list()
+        try:
+            multiproc_train_loop(results)
+        finally:
+            with open("test", "w") as fp:
+                json.dump(list(results), fp)
+
+            # Now works as expected in case of releasing ProxyList resources use del results[:]
+
 
 """
 Examples:
