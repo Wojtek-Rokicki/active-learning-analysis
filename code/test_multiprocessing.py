@@ -1,13 +1,14 @@
 # In order to measure Jupter Notebook's time type in the cell %%time
-import time
+import time, sys
 import functools
-import multiprocessing
+from multiprocessing import Pool, Manager
 
 import numpy as np
 import pandas as pd
 
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier as GBC
@@ -50,9 +51,18 @@ def train_model(Clf, X, y):
     model.fit(X, y)
     return model
 
-def train_all_models(*args):
-    _ = train_model(SVC, X_train, y_train)
-    _ = train_model(GBC, X_train, y_train)
+def train_all_models(*args, **kwargs):
+    if 'results' in kwargs:
+        m1 = train_model(SVC, X_train, y_train)
+        m2 = train_model(GBC, X_train, y_train)
+        
+        r1 = accuracy_score(y_test, m1.predict(X_test))
+        r2 = accuracy_score(y_test, m2.predict(X_test))
+
+        kwargs['results'].extend([r1,r2])
+    else:
+        _ = train_model(SVC, X_train, y_train)
+        _ = train_model(GBC, X_train, y_train)
     return
 
 NO_ITERATIONS = 100
@@ -61,25 +71,25 @@ NO_ITERATIONS = 100
 def train_loop():
     for _ in range(NO_ITERATIONS):
         train_all_models()
-        
 
 @measure_time
 def multiproc_train_loop():
-    with multiprocessing.Pool() as pool:
-        pool.map(train_all_models, range(NO_ITERATIONS)) # If iterable is large, then you should use chunking (by default it sets chunksize to best optimization value)
-
+    with Manager() as manager:
+        results = manager.list()
+        with Pool() as pool:
+            for _ in range(NO_ITERATIONS):
+                pool.apply_async(train_all_models, kwds = {'results': results})
+            pool.close()
+            pool.join()
+        print(results)
+        return list(results)
 
 if __name__ == '__main__':
     print("Loop without multiprocessing took:")
     train_loop()
-
+    
     print("Multiprocessing loop took:")
-    multiproc_train_loop()
-
-'''
-TODO:
-- global variable with synching across pool processes, which saves outcomes in any case (if there is error or keyboard interrupt)
-'''
+    results = multiproc_train_loop()
 
 """
 Examples:
