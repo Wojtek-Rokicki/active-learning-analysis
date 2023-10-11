@@ -1,7 +1,7 @@
 from enum import Enum
 from collections import Counter
 
-import os, time, json
+import os, time, json, warnings
 
 import numpy as np
 from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
@@ -21,22 +21,49 @@ try:
 except FileExistsError:
     pass
 
+
 # Active Learning querying
-def learn_active(learner, bagging, stopping_crriterion, X_pool, X_test, y_pool, y_test):
+def learn_active(learner, bagging, stopping_criterion, batch_mode, X_pool, X_test, y_pool, y_test):
         
     pool_size = len(y_pool)
     
-    match stopping_crriterion.name:
+    match stopping_criterion.name:
         case "N_QUERIES":
-            n_queries = N_QUERIES
-        case "FRACTION_OF_POOL_QUERIES":
-            n_queries = int(FRACTION_OF_POOL_QUERIES * pool_size)
+            n_queries = AL_N_QUERIES
+            match batch_mode.name:
+                case 'FIXED_BATCH_SIZE':
+                    batch_size = AL_QUERY_FIXED_BATCH_SIZE
+                    if n_queries * batch_size > pool_size:
+                        warnings.warn(f"Warning: The pool samples size ({pool_size}) is to small for requested number of queries ({n_queries * batch_size}). Decreasing n_queries to match pool_size.")
+                        n_queries = int(n_queries/batch_size)
+                case 'FRACTION_OF_N_QUERIES':
+                    raise NotImplemented(f"{batch_mode.name} for {stopping_criterion.name} not implemented.") # TODO?
+                case 'FRACTION_OF_TRAIN_SIZE':
+                    raise NotImplemented(f"{batch_mode.name} for {stopping_criterion.name} not implemented.") # TODO?
+        case "FRACTION_OF_TRAIN_QUERIES":
+            n_queries = int((AL_FRACTION_OF_TRAIN_QUERIES * pool_size / 0.9) - len(learner.y_training))
+            match batch_mode.name:
+                case 'FIXED_BATCH_SIZE':
+                    batch_size = AL_QUERY_FIXED_BATCH_SIZE
+                    if n_queries * batch_size > pool_size:
+                        warnings.warn(f"Warning: The pool samples size ({pool_size}) is to small for requested number of queries ({n_queries * batch_size}). Decreasing n_queries to match pool_size.")
+                        n_queries = int(n_queries/batch_size)
+                case 'FRACTION_OF_N_QUERIES':
+                    raise NotImplemented(f"{batch_mode.name} for {stopping_criterion.name} not implemented.")
+                case 'FRACTION_OF_TRAIN_SIZE':
+                    batch_size = int(AL_QUERY_FRACTION_OF_TRAIN_BATCH_SIZE * pool_size / 0.9)
+                    if n_queries * batch_size > pool_size:
+                        warnings.warn(f"Warning: The pool samples size ({pool_size}) is to small for requested number of queries ({n_queries * batch_size}). Decreasing n_queries to match pool_size.")
+                        n_queries = int(n_queries/batch_size)
+        # TODO: Add debuging of number of queries
+
         case "ENTROPY_CONFIDENCE":
             n_queries = X_pool.shape[0]
+            batch_size = AL_QUERY_FIXED_BATCH_SIZE
+            if n_queries * batch_size > pool_size:
+                        n_queries = int(n_queries/batch_size)
+                        warnings.warn(f"Warning: The pool samples size ({pool_size}) is to small for requested number of queries ({n_queries * batch_size}). Decreasing n_queries to match pool_size.")
             n_decline_rounds = 0
-
-    if n_queries * AL_QUERY_BATCH_SIZE > pool_size: # Check n_queries TODO: using as many samples as it can and only warning (?)
-        raise ValueError(f"The pool samples size ({pool_size}) is to small for requested number of queries ({n_queries * AL_QUERY_BATCH_SIZE}). Decrease N_QUERIES or AL_QUERY_BATCH_SIZE.")
 
     # Those are sanity checks, so they are supposed to be used for code assumptions, not for user inputs checks
     # assert solver == "liblinear", ("message")
@@ -68,7 +95,7 @@ def learn_active(learner, bagging, stopping_crriterion, X_pool, X_test, y_pool, 
     # Allow our model to query our unlabeled dataset for the most
     # informative points according to our query strategy (uncertainty sampling).
     for index in range(n_queries):
-        query_index, _ = learner.query(X_pool, n_instances=AL_QUERY_BATCH_SIZE)
+        query_index, _ = learner.query(X_pool, n_instances=batch_size)
 
         if VERBOSE:
             print(f"{index+1}. iteration: Chosen sample was of a class: {y_pool[query_index]}")
@@ -97,14 +124,14 @@ def learn_active(learner, bagging, stopping_crriterion, X_pool, X_test, y_pool, 
 
         # Entropy confidence
         entropy_confidence_history.append(np.mean(classifier_entropy(learner, X_test)))
-        if stopping_crriterion.name == "ENTROPY_CONFIDENCE":
+        if stopping_criterion.name == "ENTROPY_CONFIDENCE":
             if entropy_confidence_history[-1] < entropy_confidence_history[-2]:
                 n_decline_rounds += 1
             else:
                 n_decline_rounds = 0
-            if n_decline_rounds >= N_DECLINE_ROUNDS:
+            if n_decline_rounds >= AL_N_DECLINE_ROUNDS:
                 break
-            if len(y_pool) < AL_QUERY_BATCH_SIZE:
+            if len(y_pool) < batch_size:
                 break
         
         # filename = save_model(learner)
@@ -324,9 +351,14 @@ def test_al_methods(datasets, debug_level = 0):
                             # filename = save_model(full_learner)
                             # fold_results["full_train_filepath"] = filename
 
+                        # Preparing number of queries and batch size
+                        # TODO: move first part of learn_active to separate function
+
                         # Learn actively!
                         al_results = \
-                            learn_active(learner=learner, bagging=bagging, stopping_crriterion=al_method_params["stopping_criterion"], \
+                            learn_active(learner=learner, bagging=bagging, \
+                                        stopping_criterion=al_method_params["stopping_criterion"], \
+                                        batch_mode=al_method_params["batch_mode"], \
                                            X_pool=X_pool, X_test=X_test, \
                                            y_pool=y_pool, y_test=y_test)
                         

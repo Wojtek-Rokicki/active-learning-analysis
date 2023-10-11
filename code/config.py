@@ -121,21 +121,34 @@ PARAMS_GRID = {
 from enum import Enum
 class StoppingCriterion(Enum):
   N_QUERIES = 1
-  FRACTION_OF_POOL_QUERIES = 2
+  FRACTION_OF_TRAIN_QUERIES = 2 
   ENTROPY_CONFIDENCE = 3
   # TODO: Other criterions
 
-# Querying configuration
-AL_QUERY_BATCH_SIZE = 1
-
 # N Queries configuration
-N_QUERIES = 50 # fixed number of queries
+AL_N_QUERIES = 50 # fixed number of queries
 
 # Fraction of pool queries
-FRACTION_OF_POOL_QUERIES = 0.25 # TODO: INITIAL_TRAIN_SIZE + FRACTION_OF_POOL_QUERIES <= 1.0 !
+AL_FRACTION_OF_TRAIN_QUERIES = 0.25 
 
 # Entropy Confidence configuration
-N_DECLINE_ROUNDS = 5
+AL_N_DECLINE_ROUNDS = 5
+
+# Batch mode configuration
+class BatchMode(Enum):
+   FIXED_BATCH_SIZE = 1
+   FRACTION_OF_N_QUERIES = 2
+   FRACTION_OF_TRAIN_SIZE = 3
+
+# Querying configuration
+AL_QUERY_FIXED_BATCH_SIZE = 1
+
+# Fraction of available n queries
+AL_QUERY_FRACTION_OF_N_QUERIES_BATCH_SIZE = 0.01 # 0.05
+
+# Fraction of available n queries
+AL_QUERY_FRACTION_OF_TRAIN_BATCH_SIZE = 0.01 # 0.05
+
 
 # Query-By-Committee configuration
 # Default hyperparameters for all models are GS tunned
@@ -199,18 +212,18 @@ active_learning_methods = {
     #     "params": [{'query_strategy': vote_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
     #                 {'query_strategy': consensus_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
     #                 {'query_strategy': max_disagreement_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-    #     "classifiers": COMMITTEES,
+    #     "classifiers": COMMITTEES, d
     # },
     # "query_by_boosting", TODO
     # "expected_model_change", TODO
-    # "expected_error_reduction": {
-    #     "params": [{'query_strategy': expected_error_reduction, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-    #     "classifiers": CUSTOM_EER_CLASSIFIERS
-    # },
-    "variance_reduction": {
-        "params":[{'query_strategy': fisher_information_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-        "classifiers": CUSTOM_VR_CLASSIFIERS
+    "expected_error_reduction": {
+        "params": [{'query_strategy': expected_error_reduction, 'stopping_criterion': StoppingCriterion.FRACTION_OF_TRAIN_QUERIES, 'batch_mode': BatchMode.FRACTION_OF_TRAIN_SIZE}],
+        "classifiers": CUSTOM_EER_CLASSIFIERS
+    },
+    # "variance_reduction": {
+    #     "params":[{'query_strategy': fisher_information_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES, 'batch_mode': BatchMode.FRACTION_OF_TRAIN_SIZE}],
+    #     "classifiers": CUSTOM_VR_CLASSIFIERS
 
-    }
+    # }
     # "density_weighted" TODO
 }

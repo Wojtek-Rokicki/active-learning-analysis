@@ -13,6 +13,7 @@ archive/
 # Results
 data/**
 results/**
+**/*.log
 
 # Libraries
 code/active_learning/libact
