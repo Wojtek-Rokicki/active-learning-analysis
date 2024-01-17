@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 import sklearn
 import pandas as pd
@@ -41,8 +42,7 @@ class Benchmark:
     #   "htru2"             # fin   UCI, target: minority           10:1      17,898  8
 
     
-    cwd = os.getcwd()
-    fp_benchmark = os.path.join(cwd, BENCHMARK_PATH)
+    fp_benchmark = BENCHMARK_PATH
 
     # Download, convert and save datasets
     def save_benchmark_dataset(bunch: sklearn.utils.Bunch) -> None:

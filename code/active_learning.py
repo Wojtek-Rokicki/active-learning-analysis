@@ -27,6 +27,7 @@ def learn_active(learner, bagging, stopping_criterion, batch_mode, X_pool, X_tes
         
     pool_size = len(y_pool)
     
+    # Preparing number of queries and batch size
     match stopping_criterion.name:
         case "N_QUERIES":
             n_queries = AL_N_QUERIES
@@ -163,7 +164,7 @@ def test_al_methods(datasets, debug_level = 0):
     results = []
 
     # Active learning methods
-    for al_method_name, al_method_config in active_learning_methods.items():
+    for al_method_name, al_method_config in ACTIVE_LEARNING_METHODS.items():
 
         # Active learning method parameters
         for i, al_method_params in enumerate(al_method_config["params"]):
@@ -229,7 +230,7 @@ def test_al_methods(datasets, debug_level = 0):
                         X_train_init, X_pool, y_train_init, y_pool = train_test_split(X_train, y_train, \
                                                                         train_size=INITIAL_TRAIN_SIZE, stratify=y_train, random_state=RANDOM_STATE_SEED)
                         
-                        # Coversion to numpy
+                        # Coversion to numpy (mainly for modAL)
                         X_train = X_train.to_numpy()
                         y_train = y_train.values
                         X_train_init = X_train_init.to_numpy()
@@ -351,7 +352,6 @@ def test_al_methods(datasets, debug_level = 0):
                             # filename = save_model(full_learner)
                             # fold_results["full_train_filepath"] = filename
 
-                        # Preparing number of queries and batch size
                         # TODO: move first part of learn_active to separate function
 
                         # Learn actively!
@@ -428,7 +428,7 @@ def test_al_methods(datasets, debug_level = 0):
                                                 }
                     }
 
-                    filepath = PARTIAL_RESULTS_PATH + dataset_name + '_' + al_method_name + f'_al_params_{i}_' + f"classifier_{j}.json"
+                    filepath = PARTIAL_RESULTS_PATH + dataset_name + '_' + al_method_name + f'_al_params_{i}_' + f"classifier_{j}.json" # TODO: fix the path by absolute
                     with open(filepath, "w") as outfile:
                         json.dump(dataset_result, outfile)
                     

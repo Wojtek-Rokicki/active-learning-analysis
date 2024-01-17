@@ -14,6 +14,7 @@ archive/
 data/**
 results/**
 **/*.log
+tmp/
 
 # Libraries
 code/active_learning/libact
@@ -22,4 +23,9 @@ code/active_learning/modAL
 # Additional scripts
 clear_results.zsh
 
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
 

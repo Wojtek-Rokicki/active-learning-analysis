@@ -10,5 +10,5 @@ from active_learning import test_al_methods
 
 results = test_al_methods(datasets)
 
-with open("results.json", "w") as outfile:
+with open("results.json", "w") as outfile: # TODO: could be changed to json dump
         outfile.write(str(results).replace("\'", '\"'))

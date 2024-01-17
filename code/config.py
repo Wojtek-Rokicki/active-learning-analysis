@@ -1,3 +1,5 @@
+import pathlib
+
 # Importing sklearn classificators
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -12,22 +14,20 @@ from modAL.expected_error import expected_error_reduction
 from variance_reduction import fisher_information_sampling
 
 # Saving results paths
-BENCHMARK_PATH = './data/benchmark'
-MODELS_PATH = './results/models/'
-PLOTS_PATH = './results/plots/'
-PARTIAL_RESULTS_PATH = './results/partial/'
-# BENCHMARK_PATH = '../data/benchmark'
-# MODELS_PATH = '../results/models/'
-# PLOTS_PATH = '../results/plots/'
-# PARTIAL_RESULTS_PATH = '../results/partial/'
+FILES_DIRECTORY = pathlib.Path(__file__).parent.resolve()
+BENCHMARK_PATH =  FILES_DIRECTORY / '../data/benchmark'
+MODELS_PATH = FILES_DIRECTORY / '../results/models/'
+PLOTS_PATH = FILES_DIRECTORY / '../results/plots/'
+PARTIAL_RESULTS_PATH = FILES_DIRECTORY / '../results/partial/'
 
 # General
-RANDOM_STATE_SEED = 13
+RANDOM_STATE_SEED = 13 # 13, 10
 TEST_SIZE = 0.2
-INITIAL_TRAIN_SIZE = 0.1
+INITIAL_TRAIN_SIZE = 0.1 # fraction of train samples to be initial active learning train set
 
 # Experiments flags
 VERBOSE = 1
+WEIGHTED_TRAINING = False
 FULL_LEARNER_COMPARISON = True
 
 # Datasets
@@ -129,10 +129,10 @@ class StoppingCriterion(Enum):
 AL_N_QUERIES = 50 # fixed number of queries
 
 # Fraction of pool queries
-AL_FRACTION_OF_TRAIN_QUERIES = 0.25 
+AL_FRACTION_OF_TRAIN_QUERIES = 1.0 # 0.25 
 
 # Entropy Confidence configuration
-AL_N_DECLINE_ROUNDS = 5
+AL_N_DECLINE_ROUNDS = 5 # TODO: po stopie więcej zapytań by zobrazować cały przebieg
 
 # Batch mode configuration
 class BatchMode(Enum):
@@ -192,11 +192,11 @@ CUSTOM_VR_CLASSIFIERS = {
 CUSTOM_EER_CLASSIFIERS = {
   "GNB": {
     "Clf": GaussianNB,
-    "params": "gs"
+    "params": "gs",
   }
 }
 
-active_learning_methods = {
+ACTIVE_LEARNING_METHODS = {
     # "uncertainty_sampling": {
     #     "params": [{'query_strategy': uncertainty_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
     #     "classifiers": GS_CLASSIFIERS
@@ -217,7 +217,8 @@ active_learning_methods = {
     # "query_by_boosting", TODO
     # "expected_model_change", TODO
     "expected_error_reduction": {
-        "params": [{'query_strategy': expected_error_reduction, 'stopping_criterion': StoppingCriterion.FRACTION_OF_TRAIN_QUERIES, 'batch_mode': BatchMode.FRACTION_OF_TRAIN_SIZE}],
+        "params": [{'query_strategy': expected_error_reduction, 'query_strategy_parameters': {"pool_candidates_size": 250},
+                    'stopping_criterion': StoppingCriterion.FRACTION_OF_TRAIN_QUERIES, 'batch_mode': BatchMode.FRACTION_OF_TRAIN_SIZE}],
         "classifiers": CUSTOM_EER_CLASSIFIERS
     },
     # "variance_reduction": {
