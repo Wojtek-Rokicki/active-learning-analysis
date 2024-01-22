@@ -49,7 +49,7 @@ def expected_error_reduction(learner: ActiveLearner, X: modALinput, loss: str = 
     assert 0.0 <= p_subsample <= 1.0, 'p_subsample subsampling keep ratio must be between 0.0 and 1.0'
     assert loss in ['binary', 'log'], 'loss must be \'binary\' or \'log\''
     
-    if pool_candidates_size != None:
+    if pool_candidates_size != None and pool_candidates_size <= X.shape[0]:
         indices = np.random.choice(X.shape[0], size=pool_candidates_size, replace=False)
         X = X[indices]
 

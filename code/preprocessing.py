@@ -13,7 +13,7 @@ def merge_dataset_xy(X: pd.DataFrame, y: pd.DataFrame) -> pd.DataFrame:
 
 def standardize(dataset: pd.DataFrame) -> list[pd.DataFrame]:
     X, y = split_dataset_xy(dataset)
-    scaler = StandardScaler().fit(X)
+    scaler = StandardScaler().fit(X) # MinMax? 
     X_standardized = scaler.transform(X)
     return merge_dataset_xy(pd.DataFrame(X_standardized), y)
 

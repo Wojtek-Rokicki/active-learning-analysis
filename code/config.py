@@ -27,6 +27,7 @@ INITIAL_TRAIN_SIZE = 0.1 # fraction of train samples to be initial active learni
 
 # Experiments flags
 VERBOSE = 1
+HYPERPARAMETERS_TUNNING = False
 WEIGHTED_TRAINING = False
 FULL_LEARNER_COMPARISON = True
 
