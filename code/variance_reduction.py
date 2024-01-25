@@ -8,7 +8,7 @@ import numpy as np
 
 # @change_repr
 def fisher_information_sampling(classifier: BaseEstimator, X: modALinput,
-                    n_instances: int = 1, random_tie_break: bool = False,
+                    n_instances: int = 1, random_tie_break: bool = False, pool_candidates_size: int = None,
                     **uncertainty_measure_kwargs) -> np.ndarray:
     """
     Fisher Information sampling query strategy. Selects the instances which influences the sensitivity of the model's likelihood function with respect to the model parameters least.
@@ -24,6 +24,10 @@ def fisher_information_sampling(classifier: BaseEstimator, X: modALinput,
         The indices of the instances from X chosen to be labelled.
         The margin metric of the chosen instances.
     """
+
+    if pool_candidates_size != None and pool_candidates_size <= X.shape[0]:
+        indices = np.random.choice(X.shape[0], size=pool_candidates_size, replace=False)
+        X = X[indices]
 
     probabilities = classifier.predict_proba(X, **uncertainty_measure_kwargs)
     W_x = np.diag(np.prod(probabilities, axis=1))

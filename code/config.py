@@ -127,7 +127,7 @@ class StoppingCriterion(Enum):
   # TODO: Other criterions
 
 # N Queries configuration
-AL_N_QUERIES = 50 # fixed number of queries
+AL_N_QUERIES = 6000 #50 # fixed number of queries
 
 # Fraction of pool queries
 AL_FRACTION_OF_TRAIN_QUERIES = 1.0 # 0.25 
