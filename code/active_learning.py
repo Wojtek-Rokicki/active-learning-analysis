@@ -1,4 +1,5 @@
 import time, json, math
+from pathlib import Path
 
 import numpy as np
 from sklearn.model_selection import train_test_split, StratifiedKFold
@@ -176,17 +177,14 @@ def test_al_methods(datasets: dict):
                     print(f'N x k-CV took {(nkcv_stop_time-nkcv_start_time):.4f}s')
 
                 # Save results
-                json.dump(n_kcv_results, open(PARTIAL_RESULTS_PATH / f"{dataset_name}_{al_method_name}_{classificator.__name__}_n_kcv",'w'))
+                results_path = PARTIAL_RESULTS_PATH / f"{dataset_name}" / f"{classificator.__name__}"
+                Path(results_path).mkdir(parents=True, exist_ok=True)
+                json.dump(n_kcv_results, open(results_path / f"{al_method_name}_n_kcv",'w'))
                     
                 # Aggregate metrics across all folds
                 aggregated_metrics = aggregate_n_kcv_metrics(n_kcv_results)
-
-                # Extract metrics for 10, 25, 50, 100 percentage of train dataset
-                # TODO
                     
                 # Save aggregated results
-                json.dump(aggregated_metrics, open(PARTIAL_RESULTS_PATH / f"{dataset_name}_{al_method_name}_{classificator.__name__}_n_kcv_agg",'w'))
+                json.dump(aggregated_metrics, open(results_path / f"{al_method_name}_n_kcv_agg",'w'))
 
-                results = aggregated_metrics
-
-    return results
+    return

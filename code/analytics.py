@@ -26,6 +26,3 @@ def analyse_dataset(df: pd.DataFrame) -> None:
     plt.tight_layout()
     plt.subplots_adjust(top=0.95)
     plt.show()
-
-from sklearn.decomposition import PCA
-RANDOM_STATE_SEED = 13
