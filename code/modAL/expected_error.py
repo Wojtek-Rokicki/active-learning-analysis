@@ -2,6 +2,8 @@
 Expected error reduction framework for active learning.
 """
 
+import functools
+
 from typing import Tuple
 
 import numpy as np
@@ -14,6 +16,11 @@ from modAL.utils.data import (add_row, data_shape, data_vstack, drop_rows,
                               enumerate_data, modALinput)
 from modAL.utils.selection import multi_argmin, shuffled_argmin
 
+def expected_error_with_loss(func, loss_type: str):
+    @functools.wraps(func)
+    def loss_wrapper(*args, **kwargs):
+        return func(*args, loss=loss_type, **kwargs)
+    return loss_wrapper
 
 def expected_error_reduction(learner: ActiveLearner, X: modALinput, loss: str = 'binary',
                              p_subsample: np.float = 1.0, n_instances: int = 1,
@@ -78,9 +85,9 @@ def expected_error_reduction(learner: ActiveLearner, X: modALinput, loss: str = 
 
                 cloned_estimator.fit(X_new, y_new)
                 refitted_proba = cloned_estimator.predict_proba(X_reduced)
-                if loss is 'binary':
+                if loss == 'binary':
                     nloss = _proba_uncertainty(refitted_proba)
-                elif loss is 'log':
+                elif loss == 'log':
                     nloss = _proba_entropy(refitted_proba)
 
                 expected_error[x_idx] += np.sum(nloss)*X_proba[x_idx, y_idx]

@@ -8,21 +8,21 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import GradientBoostingClassifier
     
+from modAL.random_sampling import random_sampling
 from modAL.uncertainty import uncertainty_sampling
-from modAL.disagreement import vote_entropy_sampling, consensus_entropy_sampling, max_disagreement_sampling
-from modAL.expected_error import expected_error_reduction
+from modAL.expected_error import expected_error_with_loss, expected_error_reduction
 from variance_reduction import fisher_information_sampling
 
 # Saving results paths
 FILES_DIRECTORY = pathlib.Path(__file__).parent.resolve()
-BENCHMARK_PATH =  FILES_DIRECTORY / '../data/benchmark'
-MODELS_PATH = FILES_DIRECTORY / '../results/models/'
+BENCHMARKS_PATH =  FILES_DIRECTORY / '../data/benchmarks'
 PLOTS_PATH = FILES_DIRECTORY / '../results/plots/'
 PARTIAL_RESULTS_PATH = FILES_DIRECTORY / '../results/partial/'
 
 # General
-RANDOM_STATE_SEED = 13 # 13, 10
-TEST_SIZE = 0.2
+RANDOM_STATE_SEED = 13
+N_KCV = 4
+TEST_SIZE = 0.2 # equals to inversion of k parameter in k-fold CV
 INITIAL_TRAIN_SIZE = 0.1 # fraction of train samples to be initial active learning train set
 
 # Experiments flags
@@ -32,7 +32,7 @@ WEIGHTED_TRAINING = False
 FULL_LEARNER_COMPARISON = True
 
 # Datasets
-DATASETS = [      # ID    Repository & Target             Ratio     #S      #F
+DATASETS_NAMES = [          # ID    Repository & Target             Ratio     #S      #F
         "ecoli",            # 1     UCI, target: imU                8.6:1     336     7
         "optical_digits",   # 2     UCI, target: 8                  9.1:1     5,620   64
         "satimage",         # 3     UCI, target: 4                  9.3:1     6,435   36
@@ -61,171 +61,60 @@ DATASETS = [      # ID    Repository & Target             Ratio     #S      #F
         # "protein_homo",     # 26    KDD CUP 2004, minority          11:1      145,751 74  ## takes so long ...
         "abalone_19"        # 27    UCI, target: 19                 130:1     4,177   10
     ] 
-
-# Classifiers with hyperparameters tunning
-GS_CLASSIFIERS = {
-    "GNB": {"Clf": GaussianNB, "params": "gs"},
-    "LR": {"Clf": LogisticRegression, "params": "gs"},
-    "SVC": {"Clf": SVC, "params": "gs"},
-    "KNN": {"Clf": KNeighborsClassifier, "params": "gs"},
-    "RFC": {"Clf": RandomForestClassifier, "params": "gs"},
-    "GBC": {"Clf": GradientBoostingClassifier, "params": "gs"}
-}
-
-PARAMS_GRID = {
-    "GaussianNB": {
-        "var_smoothing": [1, 1e-3, 1e-6, 1e-9]
-    },
-    "LogisticRegression": [
-      {
-        "class_weight": [None, 'balanced'],
-        "solver": ['lbfgs'],
-        "penalty": ['l2', None],
-        "C": [100, 10, 1.0, 0.1, 0.01]
-    },
-    {
-        "class_weight": [None, 'balanced'],
-        "solver": ['liblinear'],
-        "penalty": ['l1', 'l2'],
-        "C": [100, 10, 1.0, 0.1, 0.01]
-    }
-    ],
-    "KNeighborsClassifier": {
-        "n_neighbors": [2, 3, 5, 10, 15],
-        "leaf_size": [20, 25, 30, 35],
-        "p": [1, 2], 
-    },
-    "SVC": {
-        "class_weight": [None, 'balanced'],
-        "gamma": ['auto', 'scale'],
-        "kernel": ['linear', 'rbf'],
-        "C": [100, 10, 1.0, 0.1],
-        "probability": [True],
-        "random_state": [13]   
-    },
-    "RandomForestClassifier": {
-        "class_weight": [None, 'balanced'],
-        "n_estimators": [25, 100, 250, 500],
-        "min_samples_split": [3, 7, 10, 13],
-        "max_depth": [None, 2, 3, 5]  
-    },
-    "GradientBoostingClassifier": {
-        "n_estimators": [25, 100, 250, 500],
-        "min_samples_split": [3, 7, 10, 13],
-        "max_depth": [1, 2, 3, 5]  
-    }
-}
-
-# Active learning configurations
-
-# Stopping criterion configuration
-from enum import Enum
-class StoppingCriterion(Enum):
-  N_QUERIES = 1
-  FRACTION_OF_TRAIN_QUERIES = 2 
-  ENTROPY_CONFIDENCE = 3
-  # TODO: Other criterions
-
-# N Queries configuration
-AL_N_QUERIES = 6000 #50 # fixed number of queries
-
-# Fraction of pool queries
-AL_FRACTION_OF_TRAIN_QUERIES = 1.0 # 0.25 
-
-# Entropy Confidence configuration
-AL_N_DECLINE_ROUNDS = 5 # TODO: po stopie więcej zapytań by zobrazować cały przebieg
-
-# Batch mode configuration
-class BatchMode(Enum):
-   FIXED_BATCH_SIZE = 1
-   FRACTION_OF_N_QUERIES = 2
-   FRACTION_OF_TRAIN_SIZE = 3
-
-# Querying configuration
-AL_QUERY_FIXED_BATCH_SIZE = 1
-
-# Fraction of available n queries
-AL_QUERY_FRACTION_OF_N_QUERIES_BATCH_SIZE = 0.01 # 0.05
-
-# Fraction of available n queries
-AL_QUERY_FRACTION_OF_TRAIN_BATCH_SIZE = 0.01 # 0.05
+        #   "htru2"             # fin   UCI, target: minority           10:1      17,898  8
 
 
-# Query-By-Committee configuration
-# Default hyperparameters for all models are GS tunned
-COMMITTEES = {
-    "GNB": {"committee_type": "homogenous", "Clf": GaussianNB, "n_models": 3},
-    "LR": {"committee_type": "homogenous", "Clf": LogisticRegression, "n_models": 3},
-    "SVC": {"committee_type": "homogenous", "Clf": SVC, "n_models": 3},
-    "KNN": {"committee_type": "homogenous", "Clf": KNeighborsClassifier, "n_models": 3},
-    "RFC": {"committee_type": "homogenous", "Clf": RandomForestClassifier, "n_models": 3},
-    "GBC": {"committee_type": "homogenous", "Clf": GradientBoostingClassifier, "n_models": 3},
-    "GNB": {"committee_type": "homogenous", "Clf": GaussianNB, "n_models": 6},
-    "LR": {"committee_type": "homogenous", "Clf": LogisticRegression, "n_models": 6},
-    "SVC": {"committee_type": "homogenous", "Clf": SVC, "n_models": 6},
-    "KNN": {"committee_type": "homogenous", "Clf": KNeighborsClassifier, "n_models": 6},
-    "RFC": {"committee_type": "homogenous", "Clf": RandomForestClassifier, "n_models": 6},
-    "GBC": {"committee_type": "homogenous", "Clf": GradientBoostingClassifier, "n_models": 6},
-    "GNB": {"committee_type": "homogenous", "Clf": GaussianNB, "n_models": 9},
-    "LR": {"committee_type": "homogenous", "Clf": LogisticRegression, "n_models": 9},
-    "SVC": {"committee_type": "homogenous", "Clf": SVC, "n_models": 9},
-    "KNN": {"committee_type": "homogenous", "Clf": KNeighborsClassifier, "n_models": 9},
-    "RFC": {"committee_type": "homogenous", "Clf": RandomForestClassifier, "n_models": 9},
-    "GBC": {"committee_type": "homogenous", "Clf": GradientBoostingClassifier, "n_models": 9},
-    "LR, SVC, KNN": {"committee_type": "heterogenous", "Clfs": [LogisticRegression, SVC, KNeighborsClassifier]},
-    "LR, SVC, RFC": {"committee_type": "heterogenous", "Clfs": [LogisticRegression, SVC, RandomForestClassifier]},
-    "LR, SVC, GBC": {"committee_type": "heterogenous", "Clfs": [LogisticRegression, SVC, GradientBoostingClassifier]},
-    "SVC, KNN, GBC": {"committee_type": "heterogenous", "Clfs": [LogisticRegression, SVC, GradientBoostingClassifier]},
-    "SVC, KNN, RFC": {"committee_type": "heterogenous", "Clfs": [LogisticRegression, SVC, GradientBoostingClassifier]},
-    "LR, KNN, GBC": {"committee_type": "heterogenous", "Clfs": [LogisticRegression, SVC, GradientBoostingClassifier]},
-    "LR, KNN, RFC": {"committee_type": "heterogenous", "Clfs": [LogisticRegression, SVC, GradientBoostingClassifier]},
-}
+CLASSIFIERS = [
+    (GaussianNB, {}),
+    (LogisticRegression, {}),
+    (SVC, {"probability": True}),
+    (KNeighborsClassifier, {}),
+    (RandomForestClassifier, {}),
+    (GradientBoostingClassifier, {}),
+]
 
-# Variance Reduction configuration
-CUSTOM_VR_CLASSIFIERS = {
-  "LR": {
-    "Clf": LogisticRegression, 
-    "params": {"penalty": None, "dual": False, "tol": 0.0001, "C": 1.0, "fit_intercept": True, "intercept_scaling": 1, "class_weight": None, "random_state": RANDOM_STATE_SEED, "solver": 'lbfgs', "max_iter": 100, "multi_class": 'auto', "verbose": 0, "warm_start": False, "n_jobs": None, "l1_ratio": None}
-    }
-}
-
-# Expected Error Reduction configuration
-CUSTOM_EER_CLASSIFIERS = {
-  "GNB": {
-    "Clf": GaussianNB,
-    "params": "gs",
-  }
-}
 
 ACTIVE_LEARNING_METHODS = {
-    # "uncertainty_sampling": {
-    #     "params": [{'query_strategy': uncertainty_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-    #     "classifiers": GS_CLASSIFIERS
-    # },
-    # "query_by_committee":{
-    #     "params": [{'query_strategy': vote_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
-    #                 {'query_strategy': consensus_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
-    #                 {'query_strategy': max_disagreement_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-    #     "classifiers": COMMITTEES,
-
-    # },
-    # "query_by_bagging":{
-    #     "params": [{'query_strategy': vote_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
-    #                 {'query_strategy': consensus_entropy_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES},
-    #                 {'query_strategy': max_disagreement_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES}],
-    #     "classifiers": COMMITTEES, d
-    # },
-    # "query_by_boosting", TODO
-    # "expected_model_change", TODO
-    "expected_error_reduction": {
-        "params": [{'query_strategy': expected_error_reduction, 'query_strategy_parameters': {"pool_candidates_size": 250},
-                    'stopping_criterion': StoppingCriterion.FRACTION_OF_TRAIN_QUERIES, 'batch_mode': BatchMode.FRACTION_OF_TRAIN_SIZE}],
-        "classifiers": CUSTOM_EER_CLASSIFIERS
+    "random_sampling": {
+        "params": {
+            'query_strategy': random_sampling,
+            'query_strategy_parameters': {}
+        },
+        "classifiers": CLASSIFIERS
     },
-    # "variance_reduction": {
-    #     "params":[{'query_strategy': fisher_information_sampling, 'stopping_criterion': StoppingCriterion.FRACTION_OF_POOL_QUERIES, 'batch_mode': BatchMode.FRACTION_OF_TRAIN_SIZE}],
-    #     "classifiers": CUSTOM_VR_CLASSIFIERS
+    "uncertainty_sampling": {
+        "params": {
+            'query_strategy': uncertainty_sampling, 
+            'query_strategy_parameters': {}
+        },
+        "classifiers": CLASSIFIERS
+    },
+    "expected_error_reduction_01": {
+        "params": {
+            'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="binary"), 
+            'query_strategy_parameters': {"pool_candidates_size": 250}
+        },
+        "classifiers": CLASSIFIERS
+    },
+    "expected_error_reduction_log": {
+        "params": {
+            'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="log"), 
+            'query_strategy_parameters': {"pool_candidates_size": 250}
+        },
+        "classifiers": CLASSIFIERS
+    },
+    "variance_reduction": {
+        "params": {
+            'query_strategy': fisher_information_sampling, 
+            'query_strategy_parameters': {"pool_candidates_size": 250}
+        },
+        "classifiers": CLASSIFIERS
 
-    # }
-    # "density_weighted" TODO
+    }
+    # TODO: Add other methods
 }
+
+COMPUTATIONALLY_COMPLEX_METHODS = [
+    'expected_error_reduction',
+    'variance_reduction'
+]
