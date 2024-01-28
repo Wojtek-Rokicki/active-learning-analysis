@@ -17,7 +17,9 @@ def shuffled_argmax(values: np.ndarray, n_instances: int = 1) -> np.ndarray:
     Returns:
         The indices and values of the n_instances largest values.
     """
-    assert n_instances <= values.shape[0], 'n_instances must be less or equal than the size of utility'
+    # assert n_instances <= values.shape[0], 'n_instances must be less or equal than the size of utility'
+    if n_instances >= values.shape[0]:
+        n_instances = values.shape[0]
 
     # shuffling indices and corresponding values
     shuffled_idx = np.random.permutation(len(values))
@@ -62,7 +64,10 @@ def multi_argmax(values: np.ndarray, n_instances: int = 1) -> np.ndarray:
     Returns:
         The indices and values of the n_instances largest values.
     """
-    assert n_instances <= values.shape[0], 'n_instances must be less or equal than the size of utility'
+    
+    # assert n_instances <= values.shape[0], 'n_instances must be less or equal than the size of utility'
+    if n_instances >= values.shape[0]:
+        n_instances = values.shape[0]
 
     max_idx = np.argpartition(-values, n_instances-1, axis=0)[:n_instances]
 

@@ -22,8 +22,7 @@ def learn_active(learner, query_parameters, X_pool, X_test, y_pool, y_test):
     pool_size = len(y_pool)
 
     # Prepare number of queries and batch size
-    if learner.query_strategy.__name__ in COMPUTATIONALLY_COMPLEX_METHODS and \
-        pool_size > 6000:
+    if pool_size > 6000:
         batch_size = math.floor((1/1000) * pool_size)
         n_queries = math.ceil(pool_size / batch_size)
     else:

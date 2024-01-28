@@ -109,12 +109,6 @@ ACTIVE_LEARNING_METHODS = {
             'query_strategy_parameters': {"pool_candidates_size": 250}
         },
         "classifiers": CLASSIFIERS
-
     }
     # TODO: Add other methods
 }
-
-COMPUTATIONALLY_COMPLEX_METHODS = [
-    'expected_error_reduction',
-    'variance_reduction'
-]

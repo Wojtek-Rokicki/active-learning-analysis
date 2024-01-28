@@ -23,6 +23,9 @@ def random_sampling(learner: ActiveLearner, X: modALinput, n_instances: int = 1,
     assert n > 0, 'Found array with 0 sample(s), while a minimum of 1 is required'
     if n == 1:
         return [0], X
+    
+    if n_instances >= n:
+        n_instances = n
 
     indices = np.random.choice(n, size=n_instances, replace=replace)
     values = X[indices]
