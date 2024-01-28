@@ -13,7 +13,7 @@ from modAL import ActiveLearner
 from modAL.uncertainty import classifier_entropy # TODO: hide classifier entropy in method_eval
 
 # Active Learning querying
-def learn_active(learner, X_pool, X_test, y_pool, y_test):
+def learn_active(learner, query_parameters, X_pool, X_test, y_pool, y_test):
         
     pool_size = len(y_pool)
 
@@ -40,7 +40,7 @@ def learn_active(learner, X_pool, X_test, y_pool, y_test):
 
     # Start AL querying
     for index in range(n_queries):
-        query_index, _ = learner.query(X_pool, n_instances=batch_size)
+        query_index, _ = learner.query(X_pool, n_instances=batch_size, **query_parameters)
 
         # Teach our ActiveLearner model the record it has requested.
         X, y = X_pool[query_index], y_pool[query_index]
@@ -130,6 +130,7 @@ def test_al_methods(datasets: dict):
                         # Preparing the ActiveLearner
                         learner = ActiveLearner(
                                             estimator = classificator(**classificator_params),
+                                            query_strategy=al_method_config["params"]["query_strategy"],
                                             X_training = X_train_init, 
                                             y_training = y_train_init
                                         )
@@ -142,7 +143,7 @@ def test_al_methods(datasets: dict):
                             y_proba = full_learner.predict_proba(X_test)
 
                             full_model_score = \
-                                method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=False)
+                                method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=False, curves=False)
 
                             fold_results["full_train_classification"] = full_model_score
 
@@ -151,7 +152,7 @@ def test_al_methods(datasets: dict):
 
                         # Learn actively!
                         al_results = \
-                            learn_active(learner=learner, \
+                            learn_active(learner=learner, query_parameters=al_method_config["params"]["query_strategy_parameters"], \
                                             X_pool=X_pool, X_test=X_test, \
                                             y_pool=y_pool, y_test=y_test)
                         

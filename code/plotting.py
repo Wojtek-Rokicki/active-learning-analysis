@@ -1,6 +1,9 @@
 import uuid, os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
+from matplotlib.axes import Axes
+from matplotlib.axis import Axis
 from config import RANDOM_STATE_SEED, PLOTS_PATH
 
 try:
@@ -32,27 +35,7 @@ def plot_pca(dataset_name, df, random_state=RANDOM_STATE_SEED):
     plt.savefig(f"{dataset_name}_pca.png") # TODO: Add the path to results
     plt.show()
 
-def plot_metrics(performance_history):
-    # Plotting metrics
-    fig, axs = plt.subplots(2, 3, figsize=(10, 7), sharex=True, sharey=True)
-
-    if type(full_model_score) is not list:
-        full_model_score = list(full_model_score.values())
-    metrics = list(zip(*[x.values() for x in performance_history]))
-
-    for i, metric_name in enumerate(performance_history[0].keys()):
-        axs[int(i/3), int(i%3)].plot(range(len(metrics[i])), metrics[i])
-        handle = axs[int(i/3), int(i%3)].plot(range(len(metrics[i])), np.ones(len(metrics[i]))*full_model_score[i], "r")
-        axs[int(i/3), int(i%3)].set_title(metric_name)
-
-    fig.suptitle("Pool based learning metrics", fontsize=16)
-    fig.supxlabel("Number of queries")
-    fig.supylabel("Metric value")
-    fig.legend(handle, ["Model trained on whole dataset"], loc='lower right')
-    fig.tight_layout()
-
-
-# confusion matrix
+# Confusion matrix
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from modAL import Committee
 
@@ -95,3 +78,116 @@ def plot_pr_curve(y_test, y_probas):
     # plt.show(block=False)
     plt.close()
     return fig, unique_filename
+
+AL_LABEL_NAME_MAPPING = {
+    "random_sampling": "RS",
+    "uncertainty_sampling": "US",
+    "expected_error_reduction_01": "EER_01",
+    "expected_error_reduction_log": "EER_LOG",
+    "variance_reduction": "VR"
+}
+
+METRIC_TITLE_NAME_MAPPING = {
+    "accuracy": "Accuracy",
+    "precision": "Precision",
+    "recall": "Recall",
+    "f2_score": "F2 Score",
+    "auc_pr_curve": "PR AUC",
+    "auc_roc_curve": "ROC AUC",
+    "entropy_confidence": None
+}
+
+# Plot metric on axis
+def plot_aggregated_metric(ax: Axis, X, y, label=None) -> Axis:
+    ax.plot(X, y, label=label)
+    return ax
+
+# Plot all 6 metrics of al method
+def plot_al_method_all_metrics(axs: Axes, al_method_name: str, al_method_metrics: dict) -> Axes:
+
+    n_queries = len(list(al_method_metrics.values())[0])
+
+    for i, metric_name in enumerate(al_method_metrics.keys()):
+        
+        ax = axs[int(i/3), int(i%3)]
+        ax = plot_aggregated_metric(ax, range(n_queries), al_method_metrics[metric_name], label=AL_LABEL_NAME_MAPPING[al_method_name])
+        
+        # Title and label setup
+        ax.set_title(METRIC_TITLE_NAME_MAPPING[metric_name])
+        ax.legend(loc='lower right')
+        
+        # Ticks setup
+        # TODO: percentage of train dataset on x axis
+        # ax.xaxis.set_major_formatter(mtick.PercentFormatter()) 
+        ax.minorticks_on()
+        ax.grid(which='minor', alpha=0.2)
+        ax.grid(which='major', alpha=0.5)
+
+    return axs
+
+def plot_full_model_metric(ax: Axis, y, x_len: int) -> Axes:
+    handle = ax.plot(range(x_len), np.ones(x_len)*y, linewidth=2, color='r')
+    return handle
+
+# Plot all 6 metrics of full model
+def plot_full_model_metrics(axs: Axes, full_model_metrics: dict, x_len: int) -> Axes:
+    for i, metric_name in enumerate(full_model_metrics.keys()):
+        ax = axs[int(i/3), int(i%3)]
+        handle = plot_full_model_metric(ax, full_model_metrics[metric_name], x_len)
+    return axs, handle
+
+
+def plot_all_n_kcv_agg_all_metrics_results(results: dict):
+    for dataset_classifier_combination_label, n_kcv_als_results in results.items():
+        fig, axs = plt.subplots(2, 3, figsize=(10, 7), sharex=True, sharey=True)
+        for n_kcv_al_result in n_kcv_als_results:
+            al_method_name = list(n_kcv_al_result.keys())[0]
+            al_method_result = list(n_kcv_al_result.values())[0]
+            axs = plot_al_method_all_metrics(axs, al_method_name, al_method_result["al_classification"]["mean"])
+        
+        axs, handle = plot_full_model_metrics(axs, al_method_result["full_train_classification"]["mean"], len(al_method_result["al_classification"]["mean"]["accuracy"]))
+        
+        dataset_name, classifier_name = dataset_classifier_combination_label.split('-')
+        fig.suptitle(f"Zapytania aktywnego uczenia \n dla klasyfikatora {classifier_name} na zbiorze {dataset_name}", fontsize=16)
+        fig.supxlabel("Liczba zapytań")
+        fig.supylabel("Wartość miary")
+        fig.legend(handle, ["Model trenowany na całym zbiorze trenującym"], loc='lower right')
+
+        fig.tight_layout()
+        
+        # Save result
+        fig.savefig(PLOTS_PATH / "all_metrics_comp" / str(dataset_classifier_combination_label + ".png"))
+
+def plot_all_n_kcv_agg_one_metric_results(results: dict, metric: str):
+    for dataset_classifier_combination_label, n_kcv_als_results in results.items():
+        fig, ax = plt.subplots(1, 1, figsize=(10, 7), sharex=True, sharey=True)
+        for n_kcv_al_result in n_kcv_als_results:
+            al_method_name = list(n_kcv_al_result.keys())[0]
+            al_method_result = list(n_kcv_al_result.values())[0]
+            n_queries = len(al_method_result["al_classification"]["mean"][metric])
+            ax = plot_aggregated_metric(ax, range(n_queries), al_method_result["al_classification"]["mean"][metric], label=AL_LABEL_NAME_MAPPING[al_method_name])
+        
+        handle = plot_full_model_metric(ax, al_method_result["full_train_classification"]["mean"][metric], n_queries)
+
+        ax.legend(loc='lower right')
+        
+        # Ticks setup
+        ax.minorticks_on()
+        ax.grid(which='minor', alpha=0.2)
+        ax.grid(which='major', alpha=0.5)
+        
+        dataset_name, classifier_name = dataset_classifier_combination_label.split('-')
+        fig.suptitle(f"Zapytania aktywnego uczenia \n dla klasyfikatora {classifier_name} na zbiorze {dataset_name}. \n Metryka {METRIC_TITLE_NAME_MAPPING[metric]}", fontsize=16)
+        fig.supxlabel("Liczba zapytań")
+        fig.supylabel("Wartość miary")
+        fig.legend(handle, ["Model trenowany na całym zbiorze trenującym"], loc='lower right')
+
+        fig.tight_layout()
+        
+        # Save result
+        dir = PLOTS_PATH / f"{metric}_comp"
+        try:
+            os.makedirs(dir)
+        except FileExistsError:
+            pass
+        fig.savefig(PLOTS_PATH / f"{metric}_comp" / str(dataset_classifier_combination_label + ".png"))
