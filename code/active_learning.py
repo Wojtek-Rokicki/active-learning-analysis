@@ -1,7 +1,7 @@
 import time, json, math
 from pathlib import Path
 import multiprocessing as mp
-from multiprocessing import Pool, Manager
+from multiprocessing import Manager
 
 import numpy as np
 from sklearn.model_selection import train_test_split, StratifiedKFold
@@ -168,14 +168,19 @@ def n_kcv_al(*args, **kwargs):
     # Concurrent k-CV
     with Manager() as manager_kcv:
         kfold_results_proxy = manager_kcv.list()
-        with Pool() as pool_kcv:
-            # Stratified K-Folds cross-validator
-            skf = StratifiedKFold(n_splits=int(1/TEST_SIZE), random_state=RANDOM_STATE_SEED, shuffle=True) 
-            for k, (kf_train_indices, kf_test_indices) in enumerate(skf.split(X, y)):
-                pool_kcv.apply_async(kcv_al, kwds = {'results': kfold_results_proxy, "n": n, "k": k, "kf_train_indices": kf_train_indices, "kf_test_indices": kf_test_indices, "X": X, "y": y, \
-                                                   "classificator": classificator, "classificator_params": classificator_params, "al_method_config": al_method_config})
-            pool_kcv.close()
-            pool_kcv.join()
+
+        kcv_processes = []
+
+        # Stratified K-Folds cross-validator
+        skf = StratifiedKFold(n_splits=int(1/TEST_SIZE), random_state=RANDOM_STATE_SEED, shuffle=True) 
+        for k, (kf_train_indices, kf_test_indices) in enumerate(skf.split(X, y)):
+            p = mp.Process(target=kcv_al, kwargs={'results': kfold_results_proxy, "n": n, "k": k, "kf_train_indices": kf_train_indices, "kf_test_indices": kf_test_indices, "X": X, "y": y, "classificator": classificator, "classificator_params": classificator_params, "al_method_config": al_method_config}, daemon=False)
+            p.start()
+            kcv_processes.append(p)
+
+        for p in kcv_processes:
+            p.join()
+
         kfold_results["kcv_results"] = list(kfold_results_proxy)
 
 
@@ -219,16 +224,19 @@ def test_al_methods(datasets: dict):
                     nkcv_start_time = time.perf_counter()
 
                 # Concurrent N x k-CV
-                with Manager() as manager_n_kcv:
-                    n_kcv_results_proxy = manager_n_kcv.list()
-                    with Pool() as pool_n_kcv:
-                        for n in range(N_KCV):
-                            pool_n_kcv.apply_async(n_kcv_al, kwds = {'results': n_kcv_results_proxy, "n": n, "X": X, "y": y, "classificator": classificator, \
-                                                               "classificator_params": classificator_params, "al_method_config": al_method_config})
-                        pool_n_kcv.close()
-                        pool_n_kcv.join()
+                with Manager() as manager:
+                    n_kcv_results_proxy = manager.list()
+                    n_kcv_processes = []
+                    for n in range(N_KCV):
+                        p = mp.Process(target=n_kcv_al, kwargs={'results': n_kcv_results_proxy, "n": n, "X": X, "y": y, "classificator": classificator, "classificator_params": classificator_params, "al_method_config": al_method_config}, daemon=False)
+                        p.start()
+                        n_kcv_processes.append(p)
 
-                    n_kcv_results["n_kcv_results"] = list(n_kcv_results_proxy)                
+                    for p in n_kcv_processes:
+                        p.join()
+                    
+                    n_kcv_results["n_kcv_results"] = list(n_kcv_results_proxy) 
+
 
                 # Time of N x k-CV
                 if VERBOSE:
