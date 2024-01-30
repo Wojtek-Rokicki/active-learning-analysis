@@ -65,6 +65,87 @@ def learn_active(learner, query_parameters, X_pool, X_test, y_pool, y_test):
 
     return results
 
+def kcv_al(*args, **kwargs):
+
+    results = kwargs["results"]
+
+    n = kwargs["n"]
+    k = kwargs["k"]
+    kf_train_indices = kwargs["kf_train_indices"]
+    kf_test_indices = kwargs["kf_test_indices"]
+
+    X = kwargs["X"]
+    y = kwargs["y"]
+
+    classificator = kwargs["classificator"]
+    classificator_params = kwargs["classificator_params"]
+
+    al_method_config = kwargs["al_method_config"]
+
+    fold_results = {}
+
+    # K-Fold train and test
+    X_train, X_test, y_train, y_test = X.iloc[kf_train_indices], \
+    X.iloc[kf_test_indices], y.iloc[kf_train_indices], y.iloc[kf_test_indices]
+    
+    # K-Fold pool from train
+    X_train_init, X_pool, y_train_init, y_pool = train_test_split(X_train, y_train, \
+                                                    train_size=INITIAL_TRAIN_SIZE, stratify=y_train, random_state=RANDOM_STATE_SEED)
+    
+    # Coversion to numpy (mainly for modAL)
+    X_train = X_train.to_numpy()
+    y_train = y_train.values
+    X_train_init = X_train_init.to_numpy()
+    y_train_init = y_train_init.values
+    X_pool = X_pool.to_numpy()
+    y_pool = y_pool.values
+    X_test = X_test.to_numpy()
+    y_test = y_test.values
+
+    if VERBOSE:
+        print(f"N = {n}: Fold no. {k+1} ...")
+
+    # Preparing the ActiveLearner
+    learner = ActiveLearner(
+                        estimator = classificator(**classificator_params),
+                        query_strategy=al_method_config["params"]["query_strategy"],
+                        X_training = X_train_init, 
+                        y_training = y_train_init
+                    )
+
+    # Model trained on whole pool comparison
+    if FULL_LEARNER_COMPARISON:
+        full_learner = classificator(**classificator_params)
+        full_learner.fit(X_train, y_train)
+        y_pred = full_learner.predict(X_test)
+        y_proba = full_learner.predict_proba(X_test)
+
+        full_model_score = \
+            method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=False, curves=False)
+
+        fold_results["full_train_classification"] = full_model_score
+
+    if VERBOSE:
+        k_start_time = time.perf_counter()
+
+    # Learn actively!
+    al_results = \
+        learn_active(learner=learner, query_parameters=al_method_config["params"]["query_strategy_parameters"], \
+                        X_pool=X_pool, X_test=X_test, \
+                        y_pool=y_pool, y_test=y_test)
+    
+    # Time of k'th fold of k-CV
+    if VERBOSE:
+        k_stop_time = time.perf_counter()
+        print(f"N = {n}: Fold no. {k+1} took {(k_stop_time-k_start_time):.4f}s")
+
+    fold_results["al_classification"] = al_results
+    results.append(fold_results)
+
+    return
+
+
+
 def n_kcv_al(*args, **kwargs):
 
     results = kwargs["results"]
@@ -84,69 +165,18 @@ def n_kcv_al(*args, **kwargs):
     if VERBOSE:
         kcv_start_time = time.perf_counter()
 
-    # Stratified K-Folds cross-validator
-    skf = StratifiedKFold(n_splits=int(1/TEST_SIZE), random_state=RANDOM_STATE_SEED, shuffle=True) 
-    for k, (kf_train_indices, kf_test_indices) in enumerate(skf.split(X, y)):
-
-        fold_results = {}
-
-        # K-Fold train and test
-        X_train, X_test, y_train, y_test = X.iloc[kf_train_indices], \
-        X.iloc[kf_test_indices], y.iloc[kf_train_indices], y.iloc[kf_test_indices]
-        
-        # K-Fold pool from train
-        X_train_init, X_pool, y_train_init, y_pool = train_test_split(X_train, y_train, \
-                                                        train_size=INITIAL_TRAIN_SIZE, stratify=y_train, random_state=RANDOM_STATE_SEED)
-        
-        # Coversion to numpy (mainly for modAL)
-        X_train = X_train.to_numpy()
-        y_train = y_train.values
-        X_train_init = X_train_init.to_numpy()
-        y_train_init = y_train_init.values
-        X_pool = X_pool.to_numpy()
-        y_pool = y_pool.values
-        X_test = X_test.to_numpy()
-        y_test = y_test.values
-
-        if VERBOSE:
-            print(f"Fold no. {k+1} ...")
-
-        # Preparing the ActiveLearner
-        learner = ActiveLearner(
-                            estimator = classificator(**classificator_params),
-                            query_strategy=al_method_config["params"]["query_strategy"],
-                            X_training = X_train_init, 
-                            y_training = y_train_init
-                        )
-
-        # Model trained on whole pool comparison
-        if FULL_LEARNER_COMPARISON:
-            full_learner = classificator(**classificator_params)
-            full_learner.fit(X_train, y_train)
-            y_pred = full_learner.predict(X_test)
-            y_proba = full_learner.predict_proba(X_test)
-
-            full_model_score = \
-                method_eval(y_test=y_test, y_pred=y_pred, y_proba=y_proba, verbose=False, curves=False)
-
-            fold_results["full_train_classification"] = full_model_score
-
-        if VERBOSE:
-            k_start_time = time.perf_counter()
-
-        # Learn actively!
-        al_results = \
-            learn_active(learner=learner, query_parameters=al_method_config["params"]["query_strategy_parameters"], \
-                            X_pool=X_pool, X_test=X_test, \
-                            y_pool=y_pool, y_test=y_test)
-        
-        # Time of k'th fold of k-CV
-        if VERBOSE:
-            k_stop_time = time.perf_counter()
-            print(f"Fold no. {k+1} took {(k_stop_time-k_start_time):.4f}s")
-
-        fold_results["al_classification"] = al_results
-        kfold_results['kcv_results'].append(fold_results)
+    # Concurrent k-CV
+    with Manager() as manager_kcv:
+        kfold_results_proxy = manager_kcv.list()
+        with Pool() as pool_kcv:
+            # Stratified K-Folds cross-validator
+            skf = StratifiedKFold(n_splits=int(1/TEST_SIZE), random_state=RANDOM_STATE_SEED, shuffle=True) 
+            for k, (kf_train_indices, kf_test_indices) in enumerate(skf.split(X, y)):
+                pool_kcv.apply_async(kcv_al, kwds = {'results': kfold_results_proxy, "n": n, "k": k, "kf_train_indices": kf_train_indices, "kf_test_indices": kf_test_indices, "X": X, "y": y, \
+                                                   "classificator": classificator, "classificator_params": classificator_params, "al_method_config": al_method_config})
+            pool_kcv.close()
+            pool_kcv.join()
+        kfold_results["kcv_results"] = list(kfold_results_proxy)
 
 
     # Time of n'th k-CV
@@ -156,7 +186,7 @@ def n_kcv_al(*args, **kwargs):
 
     results.append(kfold_results)
 
-    return results
+    return
 
 # Main loop
 def test_al_methods(datasets: dict):
@@ -189,13 +219,14 @@ def test_al_methods(datasets: dict):
                     nkcv_start_time = time.perf_counter()
 
                 # Concurrent N x k-CV
-                with Manager() as manager:
-                    n_kcv_results_proxy = manager.list()
-                    with Pool() as pool:
+                with Manager() as manager_n_kcv:
+                    n_kcv_results_proxy = manager_n_kcv.list()
+                    with Pool() as pool_n_kcv:
                         for n in range(N_KCV):
-                            pool.apply_async(n_kcv_al, kwds = {'results': n_kcv_results_proxy, "n": n, "X": X, "y": y, "classificator": classificator, "classificator_params": classificator_params, "al_method_config": al_method_config})
-                        pool.close()
-                        pool.join()
+                            pool_n_kcv.apply_async(n_kcv_al, kwds = {'results': n_kcv_results_proxy, "n": n, "X": X, "y": y, "classificator": classificator, \
+                                                               "classificator_params": classificator_params, "al_method_config": al_method_config})
+                        pool_n_kcv.close()
+                        pool_n_kcv.join()
 
                     n_kcv_results["n_kcv_results"] = list(n_kcv_results_proxy)                
 
