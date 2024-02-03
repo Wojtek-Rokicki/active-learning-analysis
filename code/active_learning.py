@@ -47,7 +47,7 @@ def learn_active(learner, query_parameters, X_pool, X_test, y_pool, y_test):
 
         # Teach our ActiveLearner model the record it has requested.
         X, y = X_pool[query_index], y_pool[query_index]
-        learner.teach(X=X, y=y)
+        learner.estimator.partial_fit(X, y)
 
         # Remove the queried instance from the unlabeled pool.
         X_pool, y_pool = np.delete(X_pool, query_index, axis=0), np.delete(y_pool, query_index)

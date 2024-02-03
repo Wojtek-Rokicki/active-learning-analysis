@@ -3,10 +3,7 @@ import pathlib
 # Importing sklearn classificators
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import GradientBoostingClassifier
+from models import SGDLogClassifier, SGDModifiedHuberClassifier
     
 from modAL.random_sampling import random_sampling
 from modAL.uncertainty import uncertainty_sampling
@@ -65,12 +62,10 @@ DATASETS_NAMES = [          # ID    Repository & Target             Ratio     #S
 
 
 CLASSIFIERS = [
-    (GaussianNB, {}),
-    (LogisticRegression, {}),
-    (SVC, {"probability": True}),
-    (KNeighborsClassifier, {}),
-    (RandomForestClassifier, {}),
-    (GradientBoostingClassifier, {}),
+    # (GaussianNB, {}),
+    (SGDLogClassifier, {}), # Logistic Regression Classifier
+    (SGDModifiedHuberClassifier, {}), # SVM Classifier    
+    # (KNeighborsClassifier, {})
 ]
 
 
@@ -89,26 +84,26 @@ ACTIVE_LEARNING_METHODS = {
         },
         "classifiers": CLASSIFIERS
     },
-    "expected_error_reduction_01": {
-        "params": {
-            'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="binary"), 
-            'query_strategy_parameters': {"pool_candidates_size": 250}
-        },
-        "classifiers": CLASSIFIERS
-    },
-    "expected_error_reduction_log": {
-        "params": {
-            'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="log"), 
-            'query_strategy_parameters': {"pool_candidates_size": 250}
-        },
-        "classifiers": CLASSIFIERS
-    },
-    "variance_reduction": {
-        "params": {
-            'query_strategy': fisher_information_sampling, 
-            'query_strategy_parameters': {"pool_candidates_size": 250}
-        },
-        "classifiers": CLASSIFIERS
-    }
+    # "expected_error_reduction_01": {
+    #     "params": {
+    #         'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="binary"), 
+    #         'query_strategy_parameters': {"pool_candidates_size": 250}
+    #     },
+    #     "classifiers": CLASSIFIERS
+    # },
+    # "expected_error_reduction_log": {
+    #     "params": {
+    #         'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="log"), 
+    #         'query_strategy_parameters': {"pool_candidates_size": 250}
+    #     },
+    #     "classifiers": CLASSIFIERS
+    # },
+    # "variance_reduction": {
+    #     "params": {
+    #         'query_strategy': fisher_information_sampling, 
+    #         'query_strategy_parameters': {"pool_candidates_size": 250}
+    #     },
+    #     "classifiers": CLASSIFIERS
+    # }
     # TODO: Add other methods
 }
