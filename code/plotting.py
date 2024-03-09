@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from matplotlib.axes import Axes
 from matplotlib.axis import Axis
-from config import RANDOM_STATE_SEED, PLOTS_PATH
+from config import RANDOM_STATE_SEED, PLOTS_PATH, INITIAL_TRAIN_SIZE
 
 try:
     os.makedirs(PLOTS_PATH)
@@ -100,6 +100,7 @@ METRIC_TITLE_NAME_MAPPING = {
 # Plot metric on axis
 def plot_aggregated_metric(ax: Axis, X, y, label=None) -> Axis:
     ax.plot(X, y, label=label)
+    ax.set(xlim=(0, 100))
     return ax
 
 # Plot all 6 metrics of al method
@@ -110,14 +111,14 @@ def plot_al_method_all_metrics(axs: Axes, al_method_name: str, al_method_metrics
     for i, metric_name in enumerate(al_method_metrics.keys()):
         
         ax = axs[int(i/3), int(i%3)]
-        ax = plot_aggregated_metric(ax, range(n_queries), al_method_metrics[metric_name], label=AL_LABEL_NAME_MAPPING[al_method_name])
+        x_axis = [(x/n_queries)*((1-INITIAL_TRAIN_SIZE)*100) + INITIAL_TRAIN_SIZE*100 for x in range(n_queries)]
+        ax = plot_aggregated_metric(ax, x_axis, al_method_metrics[metric_name], label=AL_LABEL_NAME_MAPPING[al_method_name])
         
         # Title and label setup
         ax.set_title(METRIC_TITLE_NAME_MAPPING[metric_name])
         ax.legend(loc='lower right')
         
         # Ticks setup
-        # TODO: percentage of train dataset on x axis
         # ax.xaxis.set_major_formatter(mtick.PercentFormatter()) 
         ax.minorticks_on()
         ax.grid(which='minor', alpha=0.2)
@@ -139,6 +140,8 @@ def plot_full_model_metrics(axs: Axes, full_model_metrics: dict, x_len: int) -> 
 
 def plot_all_n_kcv_agg_all_metrics_results(results: dict):
     for dataset_classifier_combination_label, n_kcv_als_results in results.items():
+        dataset_name, classifier_name = dataset_classifier_combination_label.split('-')
+
         fig, axs = plt.subplots(2, 3, figsize=(10, 7), sharex=True, sharey=True)
         for n_kcv_al_result in n_kcv_als_results:
             al_method_name = list(n_kcv_al_result.keys())[0]
@@ -147,9 +150,8 @@ def plot_all_n_kcv_agg_all_metrics_results(results: dict):
         
         axs, handle = plot_full_model_metrics(axs, al_method_result["full_train_classification"]["mean"], len(al_method_result["al_classification"]["mean"]["accuracy"]))
         
-        dataset_name, classifier_name = dataset_classifier_combination_label.split('-')
         fig.suptitle(f"Zapytania aktywnego uczenia \n dla klasyfikatora {classifier_name} na zbiorze {dataset_name}", fontsize=16)
-        fig.supxlabel("Liczba zapytań")
+        fig.supxlabel("% zbioru trenującego")
         fig.supylabel("Wartość miary")
         fig.legend(handle, ["Model trenowany na całym zbiorze trenującym"], loc='lower right')
 
@@ -165,7 +167,8 @@ def plot_all_n_kcv_agg_one_metric_results(results: dict, metric: str):
             al_method_name = list(n_kcv_al_result.keys())[0]
             al_method_result = list(n_kcv_al_result.values())[0]
             n_queries = len(al_method_result["al_classification"]["mean"][metric])
-            ax = plot_aggregated_metric(ax, range(n_queries), al_method_result["al_classification"]["mean"][metric], label=AL_LABEL_NAME_MAPPING[al_method_name])
+            x_axis = [(x/n_queries)*((1-INITIAL_TRAIN_SIZE)*100) + INITIAL_TRAIN_SIZE*100 for x in range(n_queries)]
+            ax = plot_aggregated_metric(ax, x_axis, al_method_result["al_classification"]["mean"][metric], label=AL_LABEL_NAME_MAPPING[al_method_name])
         
         handle = plot_full_model_metric(ax, al_method_result["full_train_classification"]["mean"][metric], n_queries)
 
@@ -178,7 +181,7 @@ def plot_all_n_kcv_agg_one_metric_results(results: dict, metric: str):
         
         dataset_name, classifier_name = dataset_classifier_combination_label.split('-')
         fig.suptitle(f"Zapytania aktywnego uczenia \n dla klasyfikatora {classifier_name} na zbiorze {dataset_name}. \n Metryka {METRIC_TITLE_NAME_MAPPING[metric]}", fontsize=16)
-        fig.supxlabel("Liczba zapytań")
+        fig.supxlabel("% zbioru trenującego")
         fig.supylabel("Wartość miary")
         fig.legend(handle, ["Model trenowany na całym zbiorze trenującym"], loc='lower right')
 
