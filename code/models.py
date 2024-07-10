@@ -74,7 +74,7 @@ class SGDModifiedHuberClassifier(SGDClassifier):
         average=False,
         ):
         super().__init__(
-            loss="modified_huber",
+            loss="modified_huber", # could be replaced with "hinge". modified_huber is smoothed version. It cannot, because it does not provide probabilities. Smoothed version is equal to SVC smoothed.
             penalty=penalty,
             alpha=alpha,
             l1_ratio=l1_ratio,

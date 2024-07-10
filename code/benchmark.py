@@ -4,7 +4,7 @@ import sklearn
 import pandas as pd
 from imblearn.datasets import fetch_datasets
 
-from config import DATASETS_NAMES, BENCHMARKS_PATH
+from config import DATASETS_NAMES, BENCHMARKS_PATH, FINAL_DATASET
 
 class Benchmark:
     """
@@ -45,4 +45,13 @@ class Benchmark:
         for dataset_name in Benchmark._datasets_names:
             df = Benchmark._load_benchmark_dataset(dataset_name)
             datasets[dataset_name] = df
+        return datasets
+    
+    def load_datasets() -> dict:
+        if FINAL_DATASET:
+            column_names = ["ip_mean", "ip_std", "ip_excess_curtosis", "ip_skewness", "dmsnr_mean", "dmsnr_std", "dmsnr_excess_curtosis", "dmsnr_skewness", "target"]
+            df = pd.read_csv("../data/HTRU2/HTRU_2.csv", header=None, names=column_names)
+            datasets = {"htru2": df}
+        else:
+            datasets = Benchmark.load_all_benchmark_datasets()
         return datasets

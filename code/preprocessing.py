@@ -1,10 +1,10 @@
 # Standardize dataframe
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 def split_dataset_xy(dataset: pd.DataFrame, target_name="target") -> list[pd.DataFrame]:
-    X = dataset.loc[:, dataset.columns != "target"]#.to_numpy()
-    y = dataset["target"]#.values
+    X = dataset.loc[:, dataset.columns != "target"]
+    y = dataset["target"]
     return X, y
 
 def merge_dataset_xy(X: pd.DataFrame, y: pd.DataFrame) -> pd.DataFrame:
@@ -13,7 +13,13 @@ def merge_dataset_xy(X: pd.DataFrame, y: pd.DataFrame) -> pd.DataFrame:
 
 def standardize(dataset: pd.DataFrame) -> list[pd.DataFrame]:
     X, y = split_dataset_xy(dataset)
-    scaler = StandardScaler().fit(X) # MinMax? 
+    scaler = StandardScaler().fit(X)
+    X_standardized = scaler.transform(X)
+    return merge_dataset_xy(pd.DataFrame(X_standardized), y)
+
+def min_max_scale(dataset: pd.DataFrame) -> list[pd.DataFrame]:
+    X, y = split_dataset_xy(dataset)
+    scaler = MinMaxScaler().fit(X)
     X_standardized = scaler.transform(X)
     return merge_dataset_xy(pd.DataFrame(X_standardized), y)
 

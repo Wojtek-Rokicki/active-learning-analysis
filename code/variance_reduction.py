@@ -29,15 +29,15 @@ def fisher_information_sampling(classifier: BaseEstimator, X: modALinput,
         indices = np.random.choice(X.shape[0], size=pool_candidates_size, replace=False)
         X = X[indices]
 
-    probabilities = classifier.predict_proba(X, **uncertainty_measure_kwargs)
-    W_x = np.diag(np.prod(probabilities, axis=1))
-    I_u = np.linalg.multi_dot([X.T, W_x, X])
+    probabilities = classifier.predict_proba(X, **uncertainty_measure_kwargs) # Nx2
+    W_x = np.diag(np.prod(probabilities, axis=1)) # NxN
+    I_u = np.linalg.multi_dot([X.T, W_x, X]) # FxF
 
     fi = []
     for i in range(W_x.shape[0]):
-        I_x = np.outer((X[i]*W_x[i,i]), X[i])
+        I_x = np.outer((X[i]*W_x[i,i]), X[i]) # FxF
         try:
-            inv_I_x = np.linalg.inv(I_x)
+            inv_I_x = np.linalg.inv(I_x) # Worst case O(F^3)
         except LinAlgError:
             inv_I_x = np.linalg.pinv(I_x) # or other options such as: dropping the sample (singularity means low sensitivity of the model to that sample); regularization (adding small positive values to the diagonal of the initial matrix to stabilize the calculations); pseudo-inverse (this situation - it exists for all matrices)
         tr = np.trace(np.linalg.multi_dot([I_u, inv_I_x]))

@@ -5,9 +5,10 @@ from multiprocessing import Manager
 
 import numpy as np
 from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.utils.class_weight import compute_class_weight
 
 from config import *
-from preprocessing import standardize, split_dataset_xy
+from preprocessing import standardize, min_max_scale, split_dataset_xy
 from metrics import method_eval
 from utils import aggregate_n_kcv_metrics
 
@@ -43,11 +44,33 @@ def learn_active(learner, query_parameters, X_pool, X_test, y_pool, y_test):
 
     # Start AL querying
     for index in range(n_queries):
+        if DEBUG:
+            query_start_time = time.perf_counter()
+
         query_index, _ = learner.query(X_pool, n_instances=batch_size, **query_parameters)
+
+        if DEBUG:
+            query_stop_time = time.perf_counter()
+            print(f"Query no. {index+1} took {(query_stop_time-query_start_time):.2f}s")
+
+        if DEBUG:
+            teach_start_time = time.perf_counter()
 
         # Teach our ActiveLearner model the record it has requested.
         X, y = X_pool[query_index], y_pool[query_index]
-        learner.estimator.partial_fit(X, y)
+        if learner.estimator.__class__.__name__ in ["SGDLogClassifier", "SGDModifiedHuberClassifier"]:
+            class_weights=None
+            if IMBALANCED_CLASSIFIERS:
+                class_weights = compute_class_weight('balanced', classes=np.unique(learner.y_training), y=learner.y_training) # TODO: can fail when batch learning
+                class_weights = class_weights[y]
+                learner._add_training_data(X, y)
+            learner.estimator.partial_fit(X, y, sample_weight=class_weights) # SGDs
+        else:
+            learner.teach(X, y)
+
+        if DEBUG:
+            teach_stop_time = time.perf_counter()
+            print(f"Teaching took {(teach_stop_time-teach_start_time):.2f}s")
 
         # Remove the queried instance from the unlabeled pool.
         X_pool, y_pool = np.delete(X_pool, query_index, axis=0), np.delete(y_pool, query_index)
@@ -102,7 +125,7 @@ def kcv_al(*args, **kwargs):
     X_test = X_test.to_numpy()
     y_test = y_test.values
 
-    if VERBOSE:
+    if VERBOSE == 0:
         print(f"N = {n}: Fold no. {k+1} ...")
 
     # Preparing the ActiveLearner
@@ -125,7 +148,7 @@ def kcv_al(*args, **kwargs):
 
         fold_results["full_train_classification"] = full_model_score
 
-    if VERBOSE:
+    if VERBOSE == 0:
         k_start_time = time.perf_counter()
 
     # Learn actively!
@@ -135,7 +158,7 @@ def kcv_al(*args, **kwargs):
                         y_pool=y_pool, y_test=y_test)
     
     # Time of k'th fold of k-CV
-    if VERBOSE:
+    if VERBOSE == 0:
         k_stop_time = time.perf_counter()
         print(f"N = {n}: Fold no. {k+1} took {(k_stop_time-k_start_time):.4f}s")
 
@@ -162,7 +185,7 @@ def n_kcv_al(*args, **kwargs):
 
     kfold_results = {"kcv_results": []}
 
-    if VERBOSE:
+    if VERBOSE == 0:
         kcv_start_time = time.perf_counter()
 
     # Concurrent k-CV
@@ -185,7 +208,7 @@ def n_kcv_al(*args, **kwargs):
 
 
     # Time of n'th k-CV
-    if VERBOSE:
+    if VERBOSE == 0:
         kcv_stop_time = time.perf_counter()
         print(f'N = {n+1} took {(kcv_stop_time-kcv_start_time):.4f}s')
 
@@ -205,7 +228,7 @@ def test_al_methods(datasets: dict):
             # Classificator model
             for classificator, classificator_params in al_method_config["classifiers"]:              
 
-                if VERBOSE:
+                if VERBOSE == 0:
                     print(50*"-"+"\n",\
                         f"Dataset: {dataset_name}\n",\
                         f"Classificator: {classificator.__name__}\n",\
@@ -213,14 +236,20 @@ def test_al_methods(datasets: dict):
                         50*"-"+"\n", sep='', end='\n')
 
                 # Standardizing
-                dataset = standardize(dataset)
+                if classificator.__name__ == "ComplementNB":
+                    dataset = min_max_scale(dataset)
+                else:
+                    dataset = standardize(dataset)
+
+                # Replace negative samples with 0
+                dataset['target'] = dataset['target'].replace(-1, 0)
 
                 # Spliting
                 X, y = split_dataset_xy(dataset)
 
                 n_kcv_results = {'n_kcv_results': []}
 
-                if VERBOSE:
+                if VERBOSE == 0:
                     nkcv_start_time = time.perf_counter()
 
                 # Concurrent N x k-CV
@@ -239,7 +268,7 @@ def test_al_methods(datasets: dict):
 
 
                 # Time of N x k-CV
-                if VERBOSE:
+                if VERBOSE == 0:
                     nkcv_stop_time = time.perf_counter()
                     print(f'N x k-CV took {(nkcv_stop_time-nkcv_start_time):.4f}s')
 
