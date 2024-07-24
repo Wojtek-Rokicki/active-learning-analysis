@@ -1,5 +1,7 @@
 {
     "python.analysis.extraPaths": [
         "./code/active_learning/modAL"
-    ]
+    ],
+    "python.languageServer": "Pylance",
+
 }
