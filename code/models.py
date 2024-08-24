@@ -1,4 +1,6 @@
+import numpy as np
 from sklearn.linear_model import SGDClassifier
+from sklearn.naive_bayes import GaussianNB
 DEFAULT_EPSILON = 0.1
 
 class SGDLogClassifier(SGDClassifier):
@@ -96,3 +98,90 @@ class SGDModifiedHuberClassifier(SGDClassifier):
             warm_start=warm_start,
             average=average,
         )
+
+class WeightedGaussianNB(GaussianNB):
+    def fit(self, X, y, sample_weight=None):
+        # Initialize the parameters
+        self.classes_ = np.unique(y)
+        self.theta_ = np.zeros((len(self.classes_), X.shape[1]))  # means
+        self.sigma_ = np.zeros((len(self.classes_), X.shape[1]))  # variances
+        self.class_prior_ = np.zeros(len(self.classes_))  # class priors
+        self.class_count_ = np.zeros(len(self.classes_))
+        
+        if sample_weight is None:
+            sample_weight = np.ones_like(y)
+        
+        # Calculate the weighted means, variances, and class priors
+        for i, y_i in enumerate(self.classes_):
+            X_i = X[y == y_i]
+            sw_i = sample_weight[y == y_i]
+            total_weight = np.sum(sw_i)
+            self.theta_[i, :] = np.average(X_i, axis=0, weights=sw_i)
+            self.sigma_[i, :] = np.average((X_i - self.theta_[i, :]) ** 2, axis=0, weights=sw_i)
+            self.class_prior_[i] = total_weight
+            self.class_count_[i] = total_weight
+
+        # Normalize the class priors
+        self.class_prior_ /= np.sum(self.class_prior_)
+        
+        return self
+    
+    def partial_fit(self, X, y, classes=None, sample_weight=None):
+        if sample_weight is None:
+            sample_weight = np.ones_like(y)
+
+        if not hasattr(self, "classes_"):
+            self.classes_ = np.unique(y) if classes is None else classes
+            self.theta_ = np.zeros((len(self.classes_), X.shape[1]))
+            self.sigma_ = np.zeros((len(self.classes_), X.shape[1]))
+            self.class_prior_ = np.zeros(len(self.classes_))
+            self.class_count_ = np.zeros(len(self.classes_))
+            self.n_features_ = X.shape[1]
+        
+        for i, y_i in enumerate(self.classes_):
+            X_i = X[y == y_i]
+            sw_i = sample_weight[y == y_i]
+            total_weight = np.sum(sw_i)
+
+            if total_weight == 0:
+                continue
+            
+            old_count = self.class_count_[i]
+            new_count = old_count + total_weight
+
+            if old_count == 0:
+                # Initialize if first batch for this class
+                self.theta_[i, :] = np.average(X_i, axis=0, weights=sw_i)
+                self.sigma_[i, :] = np.average((X_i - self.theta_[i, :]) ** 2, axis=0, weights=sw_i)
+            else:
+                # Update the mean and variance incrementally
+                new_theta_i = np.average(X_i, axis=0, weights=sw_i)
+                new_sigma_i = np.average((X_i - new_theta_i) ** 2, axis=0, weights=sw_i)
+
+                self.theta_[i, :] = (self.theta_[i, :] * old_count + new_theta_i * total_weight) / new_count
+                self.sigma_[i, :] = (
+                    old_count * self.sigma_[i, :] + old_count * self.theta_[i, :] ** 2 +
+                    total_weight * new_sigma_i + total_weight * new_theta_i ** 2
+                ) / new_count - self.theta_[i, :] ** 2
+
+            self.class_count_[i] = new_count
+
+        # Update and normalize class priors
+        self.class_prior_ = self.class_count_ / np.sum(self.class_count_)
+
+        return self
+    
+    def _joint_log_likelihood(self, X):
+        # Small constant to prevent division by zero
+        epsilon = 1e-9
+
+        joint_log_likelihood = []
+        for i in range(np.size(self.classes_)):
+            # Add epsilon to the variance to prevent log(0) or log(neg_val)
+            adjusted_sigma = np.maximum(self.sigma_[i, :], epsilon)
+            jointi = np.log(self.class_prior_[i])
+            n_ij = -0.5 * np.sum(np.log(2. * np.pi * adjusted_sigma))
+            n_ij -= 0.5 * np.sum(((X - self.theta_[i, :]) ** 2) / adjusted_sigma, axis=1)
+            joint_log_likelihood.append(jointi + n_ij)
+        joint_log_likelihood = np.array(joint_log_likelihood).T
+        return joint_log_likelihood

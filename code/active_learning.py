@@ -58,13 +58,13 @@ def learn_active(learner, query_parameters, X_pool, X_test, y_pool, y_test):
 
         # Teach our ActiveLearner model the record it has requested.
         X, y = X_pool[query_index], y_pool[query_index]
-        if learner.estimator.__class__.__name__ in ["SGDLogClassifier", "SGDModifiedHuberClassifier"]:
+        if learner.estimator.__class__.__name__ in ["SGDLogClassifier", "SGDModifiedHuberClassifier", "WeightedGaussianNB"]:
             class_weights=None
             if IMBALANCED_CLASSIFIERS:
                 class_weights = compute_class_weight('balanced', classes=np.unique(learner.y_training), y=learner.y_training) # TODO: can fail when batch learning
                 class_weights = class_weights[y]
                 learner._add_training_data(X, y)
-            learner.estimator.partial_fit(X, y, sample_weight=class_weights) # SGDs
+            learner.estimator.partial_fit(X, y, sample_weight=class_weights)
         else:
             learner.teach(X, y)
 
