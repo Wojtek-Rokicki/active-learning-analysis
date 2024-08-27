@@ -4,7 +4,7 @@ import numpy as np
 # Importing sklearn classificators
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
-from models import SGDLogClassifier, SGDModifiedHuberClassifier, WeightedGaussianNB
+from models import SGDLogClassifier, SGDModifiedHuberClassifier, WeightedGaussianNB, WeightedKNeighborsClassifier
     
 from modAL.random_sampling import random_sampling
 from modAL.uncertainty import uncertainty_sampling
@@ -69,15 +69,21 @@ DATASETS_NAMES = [          # ID    Repository & Target             Ratio     #S
         # #   "htru2"             # fin   UCI, target: minority           10:1      17,898  8
     ] 
 
-CLASSIFIERS = [
-    # (GaussianNB, {}),
-    # (KNeighborsClassifier, {}),
-    # (SGDLogClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # Logistic Regression Classifier
-    # (SGDModifiedHuberClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # SVM Classifier    
-    # Imbalanced data classifiers
-    (WeightedGaussianNB, {}),
-    # (KNeighborsClassifier, {"weights": "distance"}),
-]
+CLASSIFIERS = None
+if IMBALANCED_CLASSIFIERS:
+    CLASSIFIERS = [
+        # (WeightedGaussianNB, {}),
+        (WeightedKNeighborsClassifier, {}),
+        # (SGDLogClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # Logistic Regression Classifier
+        # (SGDModifiedHuberClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # SVM Classifier    
+    ]
+else:
+    CLASSIFIERS = [
+        # (GaussianNB, {}),
+        # (KNeighborsClassifier, {}),
+        (SGDLogClassifier, { "alpha": 0.0001, "random_state": RANDOM_STATE_SEED}), # Logistic Regression Classifier
+        # (SGDModifiedHuberClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # SVM Classifier   
+    ]
 
 
 ACTIVE_LEARNING_METHODS = {
@@ -95,20 +101,20 @@ ACTIVE_LEARNING_METHODS = {
         },
         "classifiers": CLASSIFIERS
     },
-    # "expected_error_reduction_01": {
-    #     "params": {
-    #         'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="binary"), 
-    #         'query_strategy_parameters': {"pool_candidates_size": 250}
-    #     },
-    #     "classifiers": CLASSIFIERS
-    # },
-    # "expected_error_reduction_log": {
-    #     "params": {
-    #         'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="log"), 
-    #         'query_strategy_parameters': {"pool_candidates_size": 250}
-    #     },
-    #     "classifiers": CLASSIFIERS
-    # },
+    "expected_error_reduction_01": {
+        "params": {
+            'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="binary"), 
+            'query_strategy_parameters': {"pool_candidates_size": 250}
+        },
+        "classifiers": CLASSIFIERS
+    },
+    "expected_error_reduction_log": {
+        "params": {
+            'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="log"), 
+            'query_strategy_parameters': {"pool_candidates_size": 250}
+        },
+        "classifiers": CLASSIFIERS
+    },
     # "variance_reduction": {
     #     "params": {
     #         'query_strategy': fisher_information_sampling, 

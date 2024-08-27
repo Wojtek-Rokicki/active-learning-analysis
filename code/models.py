@@ -1,6 +1,7 @@
 import numpy as np
-from sklearn.linear_model import SGDClassifier
 from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import SGDClassifier
 DEFAULT_EPSILON = 0.1
 
 class SGDLogClassifier(SGDClassifier):
@@ -98,6 +99,30 @@ class SGDModifiedHuberClassifier(SGDClassifier):
             warm_start=warm_start,
             average=average,
         )
+
+class WeightedKNeighborsClassifier(KNeighborsClassifier):
+    def __init__(
+        self,
+        n_neighbors=5,
+        *,
+        weights="distance",
+        algorithm="auto",
+        leaf_size=30,
+        p=2,
+        metric="minkowski",
+        metric_params=None,
+        n_jobs=None,
+    ):
+        super().__init__(
+            n_neighbors=n_neighbors,
+            algorithm=algorithm,
+            leaf_size=leaf_size,
+            metric=metric,
+            p=p,
+            metric_params=metric_params,
+            n_jobs=n_jobs,
+        )
+        self.weights = weights
 
 class WeightedGaussianNB(GaussianNB):
     def fit(self, X, y, sample_weight=None):
