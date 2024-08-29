@@ -33,17 +33,17 @@ IMBALANCED_CLASSIFIERS = True # determines if weighting is carried out - make su
 
 # **************
 # Flags for partial tests - comparing active learning for one classifier
-WEIGHTED_TRAINING = True
+WEIGHTED_TRAINING = False
 HYPERPARAMETERS_TUNNING = False
 # **************
 
 # Datasets
 DATASETS_NAMES = [          # ID    Repository & Target             Ratio     #S      #F
-        "ecoli",            # 1     UCI, target: imU                8.6:1     336     7
+        # "ecoli",            # 1     UCI, target: imU                8.6:1     336     7
         # "optical_digits",   # 2     UCI, target: 8                  9.1:1     5,620   64
         # "satimage",         # 3     UCI, target: 4                  9.3:1     6,435   36
         # "pen_digits",       # 4     UCI, target: 5                  9.4:1     10,992  16
-        # "abalone",          # 5     UCI, target: 7                  9.7:1     4,177   10
+        "abalone",          # 5     UCI, target: 7                  9.7:1     4,177   10
         # "sick_euthyroid",   # 6     UCI, target: sick euthyroid     9.8:1     3,163   42
         # "spectrometer",     # 7     UCI, target: >=44               11:1      531     93
         # "car_eval_34",      # 8     UCI, target: good, v good       12:1      1,728   21
@@ -67,47 +67,47 @@ DATASETS_NAMES = [          # ID    Repository & Target             Ratio     #S
         # # "protein_homo",     # 26    KDD CUP 2004, minority          11:1      145,751 74  ## takes so long ...
         # "abalone_19",        # 27    UCI, target: 19                 130:1     4,177   10
         # #   "htru2"             # fin   UCI, target: minority           10:1      17,898  8
-    ] 
+    ]
 
 CLASSIFIERS = None
 if IMBALANCED_CLASSIFIERS:
     CLASSIFIERS = [
         # (WeightedGaussianNB, {}),
-        (WeightedKNeighborsClassifier, {}),
-        # (SGDLogClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # Logistic Regression Classifier
+        # (WeightedKNeighborsClassifier, {}),
+        (SGDLogClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # Logistic Regression Classifier
         # (SGDModifiedHuberClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # SVM Classifier    
     ]
 else:
     CLASSIFIERS = [
-        # (GaussianNB, {}),
-        # (KNeighborsClassifier, {}),
-        (SGDLogClassifier, { "alpha": 0.0001, "random_state": RANDOM_STATE_SEED}), # Logistic Regression Classifier
-        # (SGDModifiedHuberClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # SVM Classifier   
+        (GaussianNB, {}),
+        (KNeighborsClassifier, {}),
+        (SGDLogClassifier, { "alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # Logistic Regression Classifier
+        (SGDModifiedHuberClassifier, {"alpha": 0.1, "random_state": RANDOM_STATE_SEED}), # SVM Classifier   
     ]
 
 
 ACTIVE_LEARNING_METHODS = {
-    "random_sampling": {
-        "params": {
-            'query_strategy': random_sampling,
-            'query_strategy_parameters': {}
-        },
-        "classifiers": CLASSIFIERS
-    },
-    "uncertainty_sampling": {
-        "params": {
-            'query_strategy': uncertainty_sampling, 
-            'query_strategy_parameters': {}
-        },
-        "classifiers": CLASSIFIERS
-    },
-    "expected_error_reduction_01": {
-        "params": {
-            'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="binary"), 
-            'query_strategy_parameters': {"pool_candidates_size": 250}
-        },
-        "classifiers": CLASSIFIERS
-    },
+    # "random_sampling": {
+    #     "params": {
+    #         'query_strategy': random_sampling,
+    #         'query_strategy_parameters': {}
+    #     },
+    #     "classifiers": CLASSIFIERS
+    # },
+    # "uncertainty_sampling": {
+    #     "params": {
+    #         'query_strategy': uncertainty_sampling, 
+    #         'query_strategy_parameters': {}
+    #     },
+    #     "classifiers": CLASSIFIERS
+    # },
+    # "expected_error_reduction_01": {
+    #     "params": {
+    #         'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="binary"), 
+    #         'query_strategy_parameters': {"pool_candidates_size": 250}
+    #     },
+    #     "classifiers": CLASSIFIERS
+    # },
     "expected_error_reduction_log": {
         "params": {
             'query_strategy': expected_error_with_loss(expected_error_reduction, loss_type="log"), 
@@ -122,5 +122,4 @@ ACTIVE_LEARNING_METHODS = {
     #     },
     #     "classifiers": CLASSIFIERS
     # }
-    # TODO: Add other methods
 }
