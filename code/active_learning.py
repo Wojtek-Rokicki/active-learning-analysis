@@ -248,43 +248,37 @@ def test_al_methods(datasets: dict):
 
                 n_kcv_results = {'n_kcv_results': []}
 
+                if VERBOSE == 0:
+                    nkcv_start_time = time.perf_counter()
 
-                try:
-                    if VERBOSE == 0:
-                        nkcv_start_time = time.perf_counter()
+                # Concurrent N x k-CV
+                with Manager() as manager:
+                    n_kcv_results_proxy = manager.list()
+                    n_kcv_processes = []
+                    for n in range(N_KCV):
+                        p = mp.Process(target=n_kcv_al, kwargs={'results': n_kcv_results_proxy, "n": n, "X": X, "y": y, "classificator": classificator, "classificator_params": classificator_params, "al_method_config": al_method_config}, daemon=False)
+                        p.start()
+                        n_kcv_processes.append(p)
 
-                    # Concurrent N x k-CV
-                    with Manager() as manager:
-                        n_kcv_results_proxy = manager.list()
-                        n_kcv_processes = []
-                        for n in range(N_KCV):
-                            p = mp.Process(target=n_kcv_al, kwargs={'results': n_kcv_results_proxy, "n": n, "X": X, "y": y, "classificator": classificator, "classificator_params": classificator_params, "al_method_config": al_method_config}, daemon=False)
-                            p.start()
-                            n_kcv_processes.append(p)
-
-                        for p in n_kcv_processes:
-                            p.join()
-                        
-                        n_kcv_results["n_kcv_results"] = list(n_kcv_results_proxy) 
-
-                    # Time of N x k-CV
-                    if VERBOSE == 0:
-                        nkcv_stop_time = time.perf_counter()
-                        print(f'N x k-CV took {(nkcv_stop_time-nkcv_start_time):.4f}s')
-
-                except Exception as e:
-                    print(f"An error occurred: {e}")
+                    for p in n_kcv_processes:
+                        p.join()
                     
-                finally:
-                    # Save results
-                    results_path = PARTIAL_RESULTS_PATH / f"{dataset_name}" / f"{classificator.__name__}"
-                    Path(results_path).mkdir(parents=True, exist_ok=True)
-                    json.dump(n_kcv_results, open(results_path / f"{al_method_name}_n_kcv",'w'))
-                        
-                    # Aggregate metrics across all folds
-                    aggregated_metrics = aggregate_n_kcv_metrics(n_kcv_results)
-                        
-                    # Save aggregated results
-                    json.dump(aggregated_metrics, open(results_path / f"{al_method_name}_n_kcv_agg",'w'))
+                    n_kcv_results["n_kcv_results"] = list(n_kcv_results_proxy) 
+
+                # Time of N x k-CV
+                if VERBOSE == 0:
+                    nkcv_stop_time = time.perf_counter()
+                    print(f'N x k-CV took {(nkcv_stop_time-nkcv_start_time):.4f}s')
+
+                # Save results
+                results_path = PARTIAL_RESULTS_PATH / f"{dataset_name}" / f"{classificator.__name__}"
+                Path(results_path).mkdir(parents=True, exist_ok=True)
+                json.dump(n_kcv_results, open(results_path / f"{al_method_name}_n_kcv",'w'))
+                    
+                # Aggregate metrics across all folds
+                aggregated_metrics = aggregate_n_kcv_metrics(n_kcv_results)
+                    
+                # Save aggregated results
+                json.dump(aggregated_metrics, open(results_path / f"{al_method_name}_n_kcv_agg",'w'))
 
     return
